@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -164,8 +164,9 @@ bool dd_recreate_table(THD *thd, const char *db, const char *table_name,
     path= path_buf;
 
     /* There should be a exclusive metadata lock on the table. */
-    DBUG_ASSERT(thd->mdl_context.is_lock_owner(MDL_key::TABLE, db, table_name,
-                                               MDL_EXCLUSIVE));
+    DBUG_ASSERT(thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE,
+                                                             db, table_name,
+                                                             MDL_EXCLUSIVE));
   }
 
   /* Attempt to reconstruct the table. */

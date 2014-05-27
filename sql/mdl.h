@@ -765,9 +765,9 @@ public:
   void release_all_locks_for_name(MDL_ticket *ticket);
   void release_lock(MDL_ticket *ticket);
 
-  bool is_lock_owner(MDL_key::enum_mdl_namespace mdl_namespace,
-                     const char *db, const char *name,
-                     enum_mdl_type mdl_type);
+  bool owns_equal_or_stronger_lock(MDL_key::enum_mdl_namespace mdl_namespace,
+                                   const char *db, const char *name,
+                                   enum_mdl_type mdl_type);
   unsigned long get_lock_owner(MDL_key *mdl_key);
 
   bool has_lock(const MDL_savepoint &mdl_savepoint, MDL_ticket *mdl_ticket);

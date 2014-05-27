@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2011, Oracle and/or its affiliates.
+/* Copyright (c) 2000, 2014, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -167,14 +166,14 @@ lock_tables_check(THD *thd, TABLE **tables, uint count, uint flags)
       lock table for read while having only MDL_SHARED lock on it.
     */
     DBUG_ASSERT(t->s->tmp_table ||
-                thd->mdl_context.is_lock_owner(MDL_key::TABLE,
-                                 t->s->db.str, t->s->table_name.str,
-                                 t->reginfo.lock_type >= TL_WRITE_ALLOW_WRITE ?
-                                 MDL_SHARED_WRITE : MDL_SHARED_READ) ||
+                thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE,
+                                   t->s->db.str, t->s->table_name.str,
+                                   t->reginfo.lock_type >= TL_WRITE_ALLOW_WRITE ?
+                                   MDL_SHARED_WRITE : MDL_SHARED_READ) ||
                 (t->open_by_handler &&
-                 thd->mdl_context.is_lock_owner(MDL_key::TABLE,
-                                  t->s->db.str, t->s->table_name.str,
-                                  MDL_SHARED)));
+                 thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE,
+                                    t->s->db.str, t->s->table_name.str,
+                                    MDL_SHARED)));
 
     /*
       Prevent modifications to base tables if READ_ONLY is activated.
@@ -983,8 +982,9 @@ bool Global_read_lock::lock_global_read_lock(THD *thd)
   {
     MDL_request mdl_request;
 
-    DBUG_ASSERT(! thd->mdl_context.is_lock_owner(MDL_key::GLOBAL, "", "",
-                                                 MDL_SHARED));
+    DBUG_ASSERT(! thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::GLOBAL,
+                                                               "", "",
+                                                               MDL_SHARED));
     mdl_request.init(MDL_key::GLOBAL, "", "", MDL_SHARED, MDL_EXPLICIT);
 
     if (thd->mdl_context.acquire_lock(&mdl_request,

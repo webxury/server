@@ -1,4 +1,4 @@
-/* Copyright (c) 2005, 2014, Oracle and/or its affiliates.
+/* Copyright (c) 2005, 2014, Oracle and/or its affiliates. All rights reserved.
    Copyright (c) 2009, 2014, SkySQL Ab.
 
    This program is free software; you can redistribute it and/or modify
@@ -4756,10 +4756,9 @@ uint prep_alter_part_table(THD *thd, TABLE *table, Alter_info *alter_info,
       Open it as a copy of the original table, and modify its partition_info
       object to allow fast_alter_partition_table to perform the changes.
     */
-    DBUG_ASSERT(thd->mdl_context.is_lock_owner(MDL_key::TABLE,
-                                               alter_ctx->db,
-                                               alter_ctx->table_name,
-                                               MDL_INTENTION_EXCLUSIVE));
+    DBUG_ASSERT(thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE,
+                                   alter_ctx->db, alter_ctx->table_name,
+                                   MDL_INTENTION_EXCLUSIVE));
 
     tab_part_info= table->part_info;
 
@@ -5858,10 +5857,10 @@ static bool mysql_drop_partitions(ALTER_PARTITION_PARAM_TYPE *lpt)
   int error;
   DBUG_ENTER("mysql_drop_partitions");
 
-  DBUG_ASSERT(lpt->thd->mdl_context.is_lock_owner(MDL_key::TABLE,
-                                                lpt->table->s->db.str,
-                                                lpt->table->s->table_name.str,
-                                                MDL_EXCLUSIVE));
+  DBUG_ASSERT(lpt->thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE,
+                                      lpt->table->s->db.str,
+                                      lpt->table->s->table_name.str,
+                                      MDL_EXCLUSIVE));
 
   build_table_filename(path, sizeof(path) - 1, lpt->db, lpt->table_name, "", 0);
   if ((error= lpt->table->file->ha_drop_partitions(path)))
@@ -6623,9 +6622,9 @@ void handle_alter_part_error(ALTER_PARTITION_PARAM_TYPE *lpt,
       Better to do that here, than leave the cleaning up to others.
       Aquire EXCLUSIVE mdl lock if not already aquired.
     */
-    if (!thd->mdl_context.is_lock_owner(MDL_key::TABLE, lpt->db,
-                                        lpt->table_name,
-                                        MDL_EXCLUSIVE))
+    if (!thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE, lpt->db,
+                                                      lpt->table_name,
+                                                      MDL_EXCLUSIVE))
     {
       if (wait_while_table_is_used(thd, table, HA_EXTRA_FORCE_REOPEN))
       {

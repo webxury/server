@@ -849,8 +849,8 @@ bool tdc_remove_table(THD *thd, enum_tdc_remove_table_type remove_type,
   DBUG_PRINT("enter",("name: %s  remove_type: %d", table_name, remove_type));
 
   DBUG_ASSERT(remove_type == TDC_RT_REMOVE_UNUSED ||
-              thd->mdl_context.is_lock_owner(MDL_key::TABLE, db, table_name,
-                                             MDL_EXCLUSIVE));
+              thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE, db,
+                                 table_name, MDL_EXCLUSIVE));
 
 
   mysql_mutex_lock(&LOCK_unused_shares);

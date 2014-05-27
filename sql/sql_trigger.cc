@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2004, 2012, Oracle and/or its affiliates.
+   Copyright (c) 2004, 2014, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -2028,8 +2028,10 @@ bool Table_triggers_list::change_table_name(THD *thd, const char *db,
     This method interfaces the mysql server code protected by
     an exclusive metadata lock.
   */
-  DBUG_ASSERT(thd->mdl_context.is_lock_owner(MDL_key::TABLE, db, old_table,
-                                             MDL_EXCLUSIVE));
+  DBUG_ASSERT(thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE,
+                                                           db,
+                                                           old_table,
+                                                           MDL_EXCLUSIVE));
 
   DBUG_ASSERT(my_strcasecmp(table_alias_charset, db, new_db) ||
               my_strcasecmp(table_alias_charset, old_alias, new_table));

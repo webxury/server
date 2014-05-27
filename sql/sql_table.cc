@@ -2357,9 +2357,9 @@ int mysql_rm_table_no_locks(THD *thd, TABLE_LIST *tables, bool if_exists,
     {
       non_temp_tables_count++;
 
-      DBUG_ASSERT(thd->mdl_context.is_lock_owner(MDL_key::TABLE, table->db,
-                                                 table->table_name,
-                                                 MDL_SHARED));
+      DBUG_ASSERT(thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE,
+                                     table->db, table->table_name,
+                                     MDL_SHARED));
 
       alias= (lower_case_table_names == 2) ? table->alias : table->table_name;
       /* remove .frm file and engine files */
@@ -2460,9 +2460,9 @@ int mysql_rm_table_no_locks(THD *thd, TABLE_LIST *tables, bool if_exists,
                          false);
 
       /* Check that we have an exclusive lock on the table to be dropped. */
-      DBUG_ASSERT(thd->mdl_context.is_lock_owner(MDL_key::TABLE, table->db,
-                                                 table->table_name,
-                                                 MDL_EXCLUSIVE));
+      DBUG_ASSERT(thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE,
+                                     table->db, table->table_name,
+                                     MDL_EXCLUSIVE));
 
       // Remove extension for delete
       *(end= path + path_length - reg_ext_length)= '\0';
@@ -5414,9 +5414,10 @@ bool mysql_create_like_table(THD* thd, TABLE_LIST* table,
       non-temporary table.
     */
     DBUG_ASSERT((create_info->tmp_table()) ||
-                thd->mdl_context.is_lock_owner(MDL_key::TABLE, table->db,
-                                               table->table_name,
-                                               MDL_EXCLUSIVE));
+                thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::TABLE,
+                                                             table->db,
+                                                             table->table_name,
+                                                             MDL_EXCLUSIVE));
   }
 
   DEBUG_SYNC(thd, "create_table_like_before_binlog");
@@ -8418,9 +8419,8 @@ bool mysql_alter_table(THD *thd,char *new_db, char *new_name,
         Global intention exclusive lock must have been already acquired when
         table to be altered was open, so there is no need to do it here.
       */
-      DBUG_ASSERT(thd->mdl_context.is_lock_owner(MDL_key::GLOBAL,
-                                                 "", "",
-                                                 MDL_INTENTION_EXCLUSIVE));
+      DBUG_ASSERT(thd->mdl_context.owns_equal_or_stronger_lock(MDL_key::GLOBAL,
+                                     "", "", MDL_INTENTION_EXCLUSIVE));
 
       if (thd->mdl_context.acquire_locks(&mdl_requests,
                                          thd->variables.lock_wait_timeout))
