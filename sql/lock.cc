@@ -574,29 +574,22 @@ void mysql_lock_abort(THD *thd, TABLE *table, bool upgrade_lock)
 
   @param thd	   Thread handler
   @param table	   Table that should be removed from lock queue
-
-  @retval
-    0  Table was not locked by another thread
-  @retval
-    1  Table was locked by at least one other thread
 */
 
-bool mysql_lock_abort_for_thread(THD *thd, TABLE *table)
+void mysql_lock_abort_for_thread(THD *thd, TABLE *table)
 {
   MYSQL_LOCK *locked;
-  bool result= FALSE;
   DBUG_ENTER("mysql_lock_abort_for_thread");
 
   if ((locked= get_lock_data(thd, &table, 1, GET_LOCK_UNLOCK | GET_LOCK_ON_THD)))
   {
     for (uint i=0; i < locked->lock_count; i++)
     {
-      if (thr_abort_locks_for_thread(locked->locks[i]->lock,
-                                     table->in_use->thread_id))
-        result= TRUE;
+      thr_abort_locks_for_thread(locked->locks[i]->lock,
+                                 table->in_use->thread_id);
     }
   }
-  DBUG_RETURN(result);
+  DBUG_VOID_RETURN;
 }
 
 

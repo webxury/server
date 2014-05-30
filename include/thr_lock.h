@@ -1,4 +1,4 @@
-/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2014, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -153,7 +153,7 @@ enum enum_thr_lock_result thr_multi_lock(THR_LOCK_DATA **data,
 void thr_multi_unlock(THR_LOCK_DATA **data,uint count, uint unlock_flags);
 void thr_merge_locks(THR_LOCK_DATA **data, uint org_count, uint new_count);
 void thr_abort_locks(THR_LOCK *lock, my_bool upgrade_lock);
-my_bool thr_abort_locks_for_thread(THR_LOCK *lock, my_thread_id thread);
+void thr_abort_locks_for_thread(THR_LOCK *lock, my_thread_id thread);
 void thr_print_locks(void);		/* For debugging */
 my_bool thr_upgrade_write_delay_lock(THR_LOCK_DATA *data,
                                      enum thr_lock_type new_lock_type,

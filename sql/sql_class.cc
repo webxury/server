@@ -1973,11 +1973,10 @@ void THD::disconnect()
 }
 
 
-bool THD::notify_shared_lock(MDL_context_owner *ctx_in_use,
+void THD::notify_shared_lock(MDL_context_owner *ctx_in_use,
                              bool needs_thr_lock_abort)
 {
   THD *in_use= ctx_in_use->get_thd();
-  bool signalled= FALSE;
 
   if ((in_use->system_thread & SYSTEM_THREAD_DELAYED_INSERT) &&
       !in_use->killed)
@@ -1987,7 +1986,6 @@ bool THD::notify_shared_lock(MDL_context_owner *ctx_in_use,
     if (in_use->mysys_var->current_cond)
       mysql_cond_broadcast(in_use->mysys_var->current_cond);
     mysql_mutex_unlock(&in_use->mysys_var->mutex);
-    signalled= TRUE;
   }
 
   if (needs_thr_lock_abort)
@@ -2006,7 +2004,7 @@ bool THD::notify_shared_lock(MDL_context_owner *ctx_in_use,
       */
       if (!thd_table->needs_reopen())
       {
-        signalled|= mysql_lock_abort_for_thread(this, thd_table);
+        mysql_lock_abort_for_thread(this, thd_table);
         if (this && WSREP(this) && wsrep_thd_is_BF(this, FALSE))
         {
           WSREP_DEBUG("remove_table_from_cache: %llu",
@@ -2017,7 +2015,6 @@ bool THD::notify_shared_lock(MDL_context_owner *ctx_in_use,
     }
     mysql_mutex_unlock(&in_use->LOCK_thd_data);
   }
-  return signalled;
 }
 
 

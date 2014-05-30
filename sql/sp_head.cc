@@ -4200,21 +4200,15 @@ sp_head::merge_table_list(THD *thd, TABLE_LIST *table, LEX *lex_for_tmp_check)
     will be added (or to its root).
   @param[in] belong_to_view             Uppermost view which uses this routine,
     0 if none.
-
-  @retval
-    TRUE    if some elements were added
-  @retval
-    FALSE   otherwise.
 */
 
-bool
+void
 sp_head::add_used_tables_to_table_list(THD *thd,
                                        TABLE_LIST ***query_tables_last_ptr,
                                        TABLE_LIST *belong_to_view)
 {
   uint i;
   Query_arena *arena, backup;
-  bool result= FALSE;
   DBUG_ENTER("sp_head::add_used_tables_to_table_list");
 
   /*
@@ -4239,7 +4233,7 @@ sp_head::add_used_tables_to_table_list(THD *thd,
                                         stab->lock_count)) ||
         !(key_buff= (char*)thd->memdup(stab->qname.str,
                                        stab->qname.length)))
-      DBUG_RETURN(FALSE);
+      DBUG_VOID_RETURN;
 
     for (uint j= 0; j < stab->lock_count; j++)
     {
@@ -4272,14 +4266,13 @@ sp_head::add_used_tables_to_table_list(THD *thd,
       *query_tables_last_ptr= &table->next_global;
 
       tab_buff+= ALIGN_SIZE(sizeof(TABLE_LIST));
-      result= TRUE;
     }
   }
 
   if (arena)
     thd->restore_active_arena(arena, &backup);
 
-  DBUG_RETURN(result);
+  DBUG_VOID_RETURN;
 }
 
 
