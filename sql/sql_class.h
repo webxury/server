@@ -5097,6 +5097,15 @@ public:
 */
 #define CF_UPDATES_DATA (1U << 18)
 
+/**
+  SP Bulk execution safe
+*/
+#define CF_SP_BULK_SAFE (1U << 19)
+/**
+  SP Bulk execution optimized
+*/
+#define CF_SP_BULK_OPTIMIZED (1U << 20)
+
 /* Bits in server_command_flags */
 
 /**

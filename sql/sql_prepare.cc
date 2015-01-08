@@ -3824,6 +3824,13 @@ Prepared_statement::execute_bulk_loop(String *expanded_query,
     return TRUE;
   }
 
+  if (!(sql_command_flags[lex->sql_command] & CF_SP_BULK_SAFE))
+  {
+    my_error(ER_UNSUPPORTED_PS, MYF(0));
+    thd->set_bulk_execution(FALSE);
+    return TRUE;
+  }
+
 #ifndef EMBEDDED_LIBRARY
   if (setup_conversion_functions(this, &packet, packet_end, TRUE))
 #else
