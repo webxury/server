@@ -3157,7 +3157,7 @@ Item_param::Item_param(uint pos_in_query_arg) :
   state(NO_VALUE),
   item_result_type(STRING_RESULT),
   /* Don't pretend to be a literal unless value for this item is set. */
-  item_type(PARAM_ITEM),
+  item_type(PARAM_ITEM), indicators(0),
   param_type(MYSQL_TYPE_VARCHAR),
   set_param_func(default_set_param_func),
   m_out_param_info(NULL)

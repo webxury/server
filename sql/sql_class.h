@@ -3158,6 +3158,8 @@ public:
     To raise this flag, use my_error().
   */
   inline bool is_error() const { return m_stmt_da->is_error(); }
+  void set_bulk_execution(bool bulk) { m_stmt_da->set_bulk_execution(bulk); }
+  bool is_bulk_op() const { return m_stmt_da->is_bulk_op(); }
 
   /// Returns Diagnostics-area for the current statement.
   Diagnostics_area *get_stmt_da()

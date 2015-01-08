@@ -101,10 +101,24 @@ enum enum_server_command
   COM_TABLE_DUMP, COM_CONNECT_OUT, COM_REGISTER_SLAVE,
   COM_STMT_PREPARE, COM_STMT_EXECUTE, COM_STMT_SEND_LONG_DATA, COM_STMT_CLOSE,
   COM_STMT_RESET, COM_SET_OPTION, COM_STMT_FETCH, COM_DAEMON,
+  /* TODO: MariaDB extension should "grow" from the end of commands space */
+  MARIADB_COM_STMT_BULK_EXECUTE,
   /* don't forget to update const char *command_name[] in sql_parse.cc */
 
   /* Must be last */
   COM_END
+};
+
+
+/*
+  Bulk PS protocol indicator value:
+  TODO: discuss maybe it should be a flag
+*/
+enum enum_indicator_type
+{
+  STMT_INDICATOR_NONE= 0,
+  STMT_INDICATOR_NULL,
+  STMT_INDICATOR_DEFAULT
 };
 
 /* sql type stored in .frm files for virtual fields */
@@ -218,6 +232,7 @@ enum enum_server_command
 /* Don't close the connection for a connection with expired password. */
 #define CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS (1UL << 22)
 
+#define CLIENT_STMT_BULK_OPERATIONS (1UL << 28)
 #define CLIENT_PROGRESS  (1UL << 29)   /* Client support progress indicator */
 #define CLIENT_SSL_VERIFY_SERVER_CERT (1UL << 30)
 /*
@@ -259,6 +274,7 @@ enum enum_server_command
                            CLIENT_PS_MULTI_RESULTS | \
                            CLIENT_SSL_VERIFY_SERVER_CERT | \
                            CLIENT_REMEMBER_OPTIONS | \
+                           CLIENT_STMT_BULK_OPERATIONS | \
                            CLIENT_PROGRESS | \
                            CLIENT_PLUGIN_AUTH | \
                            CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA | \

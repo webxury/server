@@ -166,6 +166,7 @@ const LEX_STRING command_name[]={
   { C_STRING_WITH_LEN("Set option") },
   { C_STRING_WITH_LEN("Fetch") },
   { C_STRING_WITH_LEN("Daemon") },
+  { C_STRING_WITH_LEN("Execute Bulk") },
   { C_STRING_WITH_LEN("Error") }  // Last command number
 };
 
@@ -1404,6 +1405,11 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
   case COM_STMT_EXECUTE:
   {
     mysqld_stmt_execute(thd, packet, packet_length);
+    break;
+  }
+  case MARIADB_COM_STMT_BULK_EXECUTE:
+  {
+    mysqld_stmt_bulk_execute(thd, packet, packet_length);
     break;
   }
   case COM_STMT_FETCH:

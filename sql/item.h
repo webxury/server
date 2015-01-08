@@ -2520,6 +2520,11 @@ public:
     supply for this placeholder in mysql_stmt_execute.
   */
   enum enum_field_types param_type;
+  /*
+    Used for bulk protocol. Indicates if we should expect
+    indicators byte before value of the parameter
+  */
+  my_bool indicators;
 
   Item_param(uint pos_in_query_arg);
 
