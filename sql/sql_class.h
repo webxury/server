@@ -2263,6 +2263,8 @@ public:
   */
   Query_arena *stmt_arena;
 
+  void *bulk_param;
+
   /*
     map for tables that will be updated for a multi-table update query
     statement, for other query statements, this will be zero.
@@ -3158,7 +3160,11 @@ public:
     To raise this flag, use my_error().
   */
   inline bool is_error() const { return m_stmt_da->is_error(); }
-  void set_bulk_execution(bool bulk) { m_stmt_da->set_bulk_execution(bulk); }
+  void set_bulk_execution(void *bulk)
+  {
+    bulk_param= bulk;
+    m_stmt_da->set_bulk_execution(MY_TEST(bulk));
+  }
   bool is_bulk_op() const { return m_stmt_da->is_bulk_op(); }
 
   /// Returns Diagnostics-area for the current statement.

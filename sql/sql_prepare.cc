@@ -158,6 +158,9 @@ public:
   Select_fetch_protocol_binary result;
   Item_param **param_array;
   Server_side_cursor *cursor;
+  uchar *packet;
+  uchar *packet_end;
+  ulong iterations;
   uint param_count;
   uint last_errno;
   uint flags;
@@ -176,6 +179,7 @@ public:
   */
   uint select_number_after_prepare;
   char last_error[MYSQL_ERRMSG_SIZE];
+  my_bool start_param;
 #ifndef EMBEDDED_LIBRARY
   bool (*set_params)(Prepared_statement *st, uchar *data, uchar *data_end,
                      uchar *read_pos, String *expanded_query);
@@ -208,6 +212,8 @@ public:
                          uchar *packet_arg, uchar *packet_end_arg,
                          ulong iterations);
   bool execute_server_runnable(Server_runnable *server_runnable);
+  my_bool set_bulk_parameters();
+  ulong bulk_iterations();
   /* Destroy this statement */
   void deallocate();
 private:
@@ -3294,6 +3300,9 @@ Prepared_statement::Prepared_statement(THD *thd_arg)
   result(thd_arg),
   param_array(0),
   cursor(0),
+  packet(0),
+  packet_end(0),
+  iterations(0),
   param_count(0),
   last_errno(0),
   flags((uint) IS_IN_USE)
@@ -3802,32 +3811,82 @@ reexecute:
   return error;
 }
 
+my_bool bulk_parameters_set(THD *thd)
+{
+  Prepared_statement *stmt= (Prepared_statement *) thd->bulk_param;
+
+  if (stmt && stmt->set_bulk_parameters())
+    return FALSE;
+  return FALSE;
+}
+
+ulong bulk_parameters_iterations(THD *thd)
+{
+  Prepared_statement *stmt= (Prepared_statement *) thd->bulk_param;
+  if (!stmt)
+    return 1;
+  return stmt->bulk_iterations();
+}
+
+
+my_bool Prepared_statement::set_bulk_parameters()
+{
+  if (iterations)
+  {
+#ifndef EMBEDDED_LIBRARY
+    if ((*set_bulk_params)(this, &packet, packet_end))
+#else
+      DBUG_ASSERT(0); //TODO: support bulk parameters for embedded server
+#endif
+    {
+      my_error(ER_WRONG_ARGUMENTS, MYF(0),
+               "mysqld_stmt_bulk_execute");
+      reset_stmt_params(this);
+      return true;
+    }
+    iterations--;
+  }
+  start_param= 0;
+  return false;
+}
+
+ulong Prepared_statement::bulk_iterations()
+{
+  if (iterations)
+    return iterations;
+  return start_param ? 1 : 0;
+}
+
 bool
 Prepared_statement::execute_bulk_loop(String *expanded_query,
                                       bool open_cursor,
-                                      uchar *packet,
-                                      uchar *packet_end,
-                                      ulong iterations)
+                                      uchar *packet_arg,
+                                      uchar *packet_end_arg,
+                                      ulong iterations_arg)
 {
   Reprepare_observer reprepare_observer;
   bool error;
+  packet= packet_arg;
+  packet_end= packet_end_arg;
+  iterations= iterations_arg;
+  start_param= true;
 #ifndef DBUG_OFF
   Item *free_list_state= thd->free_list;
 #endif
   thd->select_number= select_number_after_prepare;
-  thd->set_bulk_execution(TRUE);
+  thd->set_bulk_execution((void *)this);
   /* Check if we got an error when sending long data */
   if (state == Query_arena::STMT_ERROR)
   {
     my_message(last_errno, last_error, MYF(0));
-    thd->set_bulk_execution(FALSE);
+    thd->set_bulk_execution(0);
     return TRUE;
   }
 
   if (!(sql_command_flags[lex->sql_command] & CF_SP_BULK_SAFE))
   {
     my_error(ER_UNSUPPORTED_PS, MYF(0));
-    thd->set_bulk_execution(FALSE);
+    thd->set_bulk_execution(0);
     return TRUE;
   }
 
@@ -3840,7 +3899,7 @@ Prepared_statement::execute_bulk_loop(String *expanded_query,
     my_error(ER_WRONG_ARGUMENTS, MYF(0),
             "mysqld_stmt_bulk_execute");
     reset_stmt_params(this);
-    thd->set_bulk_execution(FALSE);
+    thd->set_bulk_execution(0);
     return true;
   }
 
@@ -3849,24 +3908,22 @@ Prepared_statement::execute_bulk_loop(String *expanded_query,
                !lex->is_change_password))
   {
     my_error(ER_MUST_CHANGE_PASSWORD, MYF(0));
-    thd->set_bulk_execution(FALSE);
+    thd->set_bulk_execution(0);
     return true;
   }
 #endif
-  for (ulong i= 0; i < iterations; i++)
+
+  while((iterations || start_param) && !error && !thd->is_error())
   {
     int reprepare_attempt= 0;
-#ifndef EMBEDDED_LIBRARY
-    if ((*set_bulk_params)(this, &packet, packet_end))
-#else
-      DBUG_ASSERT(0); //TODO: support bulk parameters for embedded server
-#endif
+
+    if (!(sql_command_flags[lex->sql_command] & CF_SP_BULK_OPTIMIZED))
     {
-      my_error(ER_WRONG_ARGUMENTS, MYF(0),
-               "mysqld_stmt_bulk_execute");
-      reset_stmt_params(this);
-      thd->set_bulk_execution(FALSE);
-      return true;
+      if (set_bulk_parameters())
+      {
+        thd->set_bulk_execution(0);
+        return true;
+      }
     }
 
 reexecute:
@@ -3933,7 +3990,7 @@ reexecute:
     }
   }
   reset_stmt_params(this);
-  thd->set_bulk_execution(FALSE);
+  thd->set_bulk_execution(0);
 
   return error;
 }
