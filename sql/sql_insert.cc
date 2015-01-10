@@ -1120,7 +1120,7 @@ storing field.
     retval= thd->lex->explain->send_explain(thd);
     goto abort;
   }
-  if (values_list.elements == 1 && (!(thd->variables.option_bits & OPTION_WARNINGS) ||
+  if ((bulk_iterations * values_list.elements) == 1 && (!(thd->variables.option_bits & OPTION_WARNINGS) ||
 				    !thd->cuted_fields))
   {
     my_ok(thd, info.copied + info.deleted +
