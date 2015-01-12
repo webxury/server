@@ -3865,7 +3865,7 @@ Prepared_statement::execute_bulk_loop(String *expanded_query,
                                       ulong iterations_arg)
 {
   Reprepare_observer reprepare_observer;
-  bool error;
+  bool error= 0;
   packet= packet_arg;
   packet_end= packet_end_arg;
   iterations= iterations_arg;
