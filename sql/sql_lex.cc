@@ -547,6 +547,12 @@ void lex_start(THD *thd)
   lex->proc_list.elements=0;
 
   lex->is_lex_started= TRUE;
+
+  lex->save_group_list.empty();
+  lex->save_order_list.empty();
+  lex->win_ref= 0;
+  lex->win_frame= 0;
+
   DBUG_VOID_RETURN;
 }
 
