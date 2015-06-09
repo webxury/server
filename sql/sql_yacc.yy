@@ -1998,8 +1998,8 @@ END_OF_INPUT
 %type <cond_info_item_name> condition_information_item_name;
 %type <cond_info_list> condition_information;
 
-%type <NONE> opt_window_clause window_def_list window_def window_spec
-%type <lex_str_ptr> window_name opt_window_ref
+%type <NONE> opt_window_clause window_def_list window_def window_spec opt_window_ref
+%type <lex_str_ptr> window_name
 %type <window_frame> opt_window_frame_clause;
 %type <frame_units> window_frame_units;
 %type <NONE> window_frame_extent;
@@ -10393,14 +10393,19 @@ sum_expr:
 window_func_expr:
           window_func OVER_SYM window_name
           {
-            $$= new (thd->mem_root) Item_window_func(thd, (Item_sum *) $1,
-                                                     thd->lex->win_spec);
+            $$= new (thd->mem_root) Item_window_func(thd, (Item_sum *) $1, $3);
             if ($$ == NULL)
               MYSQL_YYABORT;
           }
         |
           window_func OVER_SYM window_spec
           {
+            LEX *lex= Lex;
+            if (Select->add_window_spec(thd, lex->win_ref,
+                                        Select->group_list,
+                                        Select->order_list,
+                                        lex->win_frame))
+              MYSQL_YYABORT;
             $$= new (thd->mem_root) Item_window_func(thd, (Item_sum *) $1,
                                                      thd->lex->win_spec); 
             if ($$ == NULL)
@@ -11399,9 +11404,10 @@ olap_opt:
 
 opt_window_clause:
           /* empty */
-          { }
+          {}
         | WINDOW_SYM
           window_def_list
+          {}
         ;
 
 window_def_list:
@@ -11411,7 +11417,14 @@ window_def_list:
 
 window_def:
           window_name AS window_spec
-          { if (Select->add_window_def(thd, $1)) MYSQL_YYABORT; }
+          { 
+            LEX *lex= Lex;
+            if (Select->add_window_def(thd, $1, lex->win_ref,
+                                       Select->group_list,
+                                       Select->order_list,
+                                       lex->win_frame ))
+              MYSQL_YYABORT;
+          }
         ;
 
 window_spec:
@@ -11423,11 +11436,11 @@ window_spec:
         ;
 
 opt_window_ref:
-          /* empty */ { $$= 0; }
+          /* empty */ {} 
         | ident
           {
-            $$= (LEX_STRING *) thd->memdup(&$1, sizeof(LEX_STRING));
-            if ($$ == NULL)
+            thd->lex->win_ref= (LEX_STRING *) thd->memdup(&$1, sizeof(LEX_STRING));
+            if (thd->lex->win_ref == NULL)
               MYSQL_YYABORT;
           }
 
@@ -11442,14 +11455,16 @@ opt_window_order_clause:
         ;
 
 opt_window_frame_clause:
-          /* empty */ { $$= 0; }
+          /* empty */ {}
         | window_frame_units window_frame_extent opt_window_frame_exclusion
           {
-            $$= new (thd->mem_root) Window_frame($1,
-                                                 thd->lex->frame_upper_bound,
-                                                 thd->lex->frame_lower_bound,
-                                                 $3);
-            if ($$ == NULL)
+            LEX *lex= Lex;
+            lex->win_frame=
+              new (thd->mem_root) Window_frame($1,
+                                               lex->frame_top_bound,
+                                               lex->frame_bottom_bound,
+                                               $3);
+            if (lex->win_frame == NULL)
               MYSQL_YYABORT;
           }
         ;
@@ -11462,15 +11477,17 @@ window_frame_units:
 window_frame_extent:
           window_frame_start
           {
-            thd->lex->frame_lower_bound= $1;
-            thd->lex->frame_upper_bound->precedence_type=
+            LEX *lex= Lex;
+            lex->frame_top_bound= $1;
+            lex->frame_bottom_bound->precedence_type=
               Window_frame_bound::PRECEDING;
-            thd->lex->frame_upper_bound->offset= (Item *) 0;
+            lex->frame_top_bound->offset= (Item *) 0;
           }
         | BETWEEN_SYM window_frame_bound AND_SYM window_frame_bound
           {
-            thd->lex->frame_lower_bound= $2;
-            thd->lex->frame_upper_bound= $4;
+            LEX *lex= Lex;
+            lex->frame_top_bound= $2;
+            lex->frame_bottom_bound= $4;
           }
         ;
 

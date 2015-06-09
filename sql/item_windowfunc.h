@@ -146,20 +146,12 @@ private:
 
 public:
   Item_window_func(THD* thd, Item_sum *win_func, LEX_STRING *win_name)
-   : Item_result_field(thd)
-  {
-    window_func= win_func;
-    window_name= win_name;
-    window_spec= 0;
-  }
+    : Item_result_field(thd), window_func(win_func), window_name(win_name),
+      window_spec(NULL) {}
 
   Item_window_func(THD* thd, Item_sum *win_func, Window_spec *win_spec)
-   : Item_result_field(thd)
-  {
-    window_func= win_func;
-    window_name= 0;
-    window_spec= win_spec;
-  } 
+    : Item_result_field(thd), window_func(win_func), window_name(NULL),
+      window_spec(win_spec) {}
 
   enum Item::Type type() const { return Item::WINDOW_FUNC_ITEM; }
 
