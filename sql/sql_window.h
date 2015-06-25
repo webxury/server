@@ -1,6 +1,6 @@
-
 #ifndef SQL_WINDOW_INCLUDED
 #define SQL_WINDOW_INCLUDED
+
 
 #include "my_global.h"
 #include "item.h"
@@ -9,7 +9,7 @@ class Window_frame_bound : public Sql_alloc
 {
 
 public:
- 
+
   enum Bound_precedence_type
   {
     PRECEDING,
@@ -25,7 +25,7 @@ public:
 
 class Window_frame : public Sql_alloc
 {
-  
+
 public:
 
   enum Frame_units
@@ -71,7 +71,7 @@ class Window_spec : public Sql_alloc
 
   Window_frame *window_frame;
 
-  Window_spec(LEX_STRING *win_ref, 
+  Window_spec(LEX_STRING *win_ref,
               SQL_I_List<ORDER> part_list,
               SQL_I_List<ORDER> ord_list,
               Window_frame *win_frame)

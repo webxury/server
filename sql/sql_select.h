@@ -2153,4 +2153,5 @@ public:
   int execute(JOIN *join);
 };
 
+int test_if_group_changed(List<Cached_item> &list);
 #endif /* SQL_SELECT_INCLUDED */
