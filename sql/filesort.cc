@@ -371,7 +371,6 @@ ha_rows filesort(THD *thd, TABLE *table, SORT_FIELD *sortorder, uint s_length,
 
   err:
   my_free(param.tmp_buffer);
-  tracker->report_merge_passes_at_end(thd->query_plan_fsort_passes);
   if (!subselect || !subselect->is_uncacheable())
   {
     table_sort.free_sort_buffer();
@@ -393,6 +392,7 @@ ha_rows filesort(THD *thd, TABLE *table, SORT_FIELD *sortorder, uint s_length,
       outfile->end_of_file=save_pos;
     }
   }
+  tracker->report_merge_passes_at_end(thd->query_plan_fsort_passes);
   if (error)
   {
     int kill_errno= thd->killed_errno();
@@ -409,7 +409,7 @@ ha_rows filesort(THD *thd, TABLE *table, SORT_FIELD *sortorder, uint s_length,
                     "%s: %s",
                     MYF(0),
                     ER_THD(thd, ER_FILSORT_ABORT),
-                    kill_errno ? ER(kill_errno) :
+                    kill_errno ? ER_THD(thd, kill_errno) :
                     thd->killed == ABORT_QUERY ? "" :
                     thd->get_stmt_da()->message());
 
@@ -447,10 +447,11 @@ ha_rows filesort(THD *thd, TABLE *table, SORT_FIELD *sortorder, uint s_length,
 void filesort_free_buffers(TABLE *table, bool full)
 {
   DBUG_ENTER("filesort_free_buffers");
+
   my_free(table->sort.record_pointers);
   table->sort.record_pointers= NULL;
 
-  if (full)
+  if (unlikely(full))
   {
     table->sort.free_sort_buffer();
     my_free(table->sort.buffpek);
@@ -458,10 +459,14 @@ void filesort_free_buffers(TABLE *table, bool full)
     table->sort.buffpek_len= 0;
   }
 
-  my_free(table->sort.addon_buf);
-  my_free(table->sort.addon_field);
-  table->sort.addon_buf= NULL;
-  table->sort.addon_field= NULL;
+  /* addon_buf is only allocated if addon_field is set */
+  if (unlikely(table->sort.addon_field))
+  {
+    my_free(table->sort.addon_field);
+    my_free(table->sort.addon_buf);
+    table->sort.addon_buf= NULL;
+    table->sort.addon_field= NULL;
+  }
   DBUG_VOID_RETURN;
 }
 

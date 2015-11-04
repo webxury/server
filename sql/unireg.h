@@ -43,14 +43,14 @@
 #define PLUGINDIR	"lib/plugin"
 #endif
 
-#define CURRENT_THD_ERRMSGS current_thd->variables.lc_messages->errmsgs->errmsgs
+#define CURRENT_THD_ERRMSGS current_thd->variables.errmsgs
 #define DEFAULT_ERRMSGS     my_default_lc_messages->errmsgs->errmsgs
 
 #define ER(X)         CURRENT_THD_ERRMSGS[(X) - ER_ERROR_FIRST]
 #define ER_DEFAULT(X) DEFAULT_ERRMSGS[(X) - ER_ERROR_FIRST]
 #define ER_SAFE(X) (((X) >= ER_ERROR_FIRST && (X) <= ER_ERROR_LAST) ? ER(X) : "Invalid error code")
-#define ER_THD(thd,X) ((thd)->variables.lc_messages->errmsgs->errmsgs[(X) - \
-                       ER_ERROR_FIRST])
+#define ER_SAFE_THD(T,X) (((X) >= ER_ERROR_FIRST && (X) <= ER_ERROR_LAST) ? ER_THD(T,X) : "Invalid error code")
+#define ER_THD(thd,X) ((thd)->variables.errmsgs[(X) - ER_ERROR_FIRST])
 #define ER_THD_OR_DEFAULT(thd,X) ((thd) ? ER_THD(thd, X) : ER_DEFAULT(X))
 
 #define ME_INFO (ME_HOLDTANG+ME_OLDWIN+ME_NOREFRESH)
@@ -110,36 +110,36 @@
   The flag means that we need to process tables only to get necessary data.
   Views are not processed.
 */
-#define OPEN_TABLE_ONLY        OPEN_FRM_FILE_ONLY*2
+#define OPEN_TABLE_ONLY        (OPEN_FRM_FILE_ONLY*2)
 /**
   This flag is used in function get_all_tables() which fills
   I_S tables with data which are retrieved from frm files and storage engine
   The flag means that we need to process views only to get necessary data.
   Tables are not processed.
 */
-#define OPEN_VIEW_ONLY         OPEN_TABLE_ONLY*2
+#define OPEN_VIEW_ONLY         (OPEN_TABLE_ONLY*2)
 /**
   This flag is used in function get_all_tables() which fills
   I_S tables with data which are retrieved from frm files and storage engine.
   The flag means that we need to open a view using
   open_normal_and_derived_tables() function.
 */
-#define OPEN_VIEW_FULL         OPEN_VIEW_ONLY*2
+#define OPEN_VIEW_FULL         (OPEN_VIEW_ONLY*2)
 /**
   This flag is used in function get_all_tables() which fills
   I_S tables with data which are retrieved from frm files and storage engine.
   The flag means that I_S table uses optimization algorithm.
 */
-#define OPTIMIZE_I_S_TABLE     OPEN_VIEW_FULL*2
+#define OPTIMIZE_I_S_TABLE     (OPEN_VIEW_FULL*2)
 /**
   This flag is used to instruct tdc_open_view() to check metadata version.
 */
-#define CHECK_METADATA_VERSION OPEN_TRIGGER_ONLY*2
+#define CHECK_METADATA_VERSION (OPEN_TRIGGER_ONLY*2)
 
 /*
   The flag means that we need to process trigger files only.
 */
-#define OPEN_TRIGGER_ONLY      OPTIMIZE_I_S_TABLE*2
+#define OPEN_TRIGGER_ONLY      (OPTIMIZE_I_S_TABLE*2)
 
 #define SC_INFO_LENGTH 4		/* Form format constant */
 #define TE_INFO_LENGTH 3

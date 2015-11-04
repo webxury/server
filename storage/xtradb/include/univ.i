@@ -45,10 +45,10 @@ Created 1/20/1994 Heikki Tuuri
 
 #define INNODB_VERSION_MAJOR	5
 #define INNODB_VERSION_MINOR	6
-#define INNODB_VERSION_BUGFIX	24
+#define INNODB_VERSION_BUGFIX	26
 
 #ifndef PERCONA_INNODB_VERSION
-#define PERCONA_INNODB_VERSION 72.2
+#define PERCONA_INNODB_VERSION 74.0
 #endif
 
 /* Enable UNIV_LOG_ARCHIVE in XtraDB */
@@ -394,7 +394,7 @@ and 2 bits for flags. This limits the uncompressed page size to 16k.
 Even though a 16k uncompressed page can theoretically be compressed
 into a larger compressed page, it is not a useful feature so we will
 limit both with this same constant. */
-#define UNIV_ZIP_SIZE_SHIFT_MAX		14
+#define UNIV_ZIP_SIZE_SHIFT_MAX		16
 
 /* Define the Min, Max, Default page sizes. */
 /** Minimum Page Size Shift (power of 2) */
@@ -580,7 +580,7 @@ number indicate that a field contains a reference to an externally
 stored part of the field in the tablespace. The length field then
 contains the sum of the following flag and the locally stored len. */
 
-#define UNIV_EXTERN_STORAGE_FIELD (UNIV_SQL_NULL - UNIV_PAGE_SIZE_MAX)
+#define UNIV_EXTERN_STORAGE_FIELD (UNIV_SQL_NULL - UNIV_PAGE_SIZE_DEF)
 
 #if defined(__GNUC__) && (__GNUC__ > 2) && ! defined(__INTEL_COMPILER)
 #define HAVE_GCC_GT_2
@@ -647,6 +647,7 @@ Windows, so define a typedef for it and a macro to use at the end of such
 functions. */
 
 #ifdef __WIN__
+#define usleep(a) Sleep((a)/1000)
 typedef ulint os_thread_ret_t;
 #define OS_THREAD_DUMMY_RETURN return(0)
 #else
