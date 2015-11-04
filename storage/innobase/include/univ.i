@@ -375,7 +375,7 @@ and 2 bits for flags. This limits the uncompressed page size to 16k.
 Even though a 16k uncompressed page can theoretically be compressed
 into a larger compressed page, it is not a useful feature so we will
 limit both with this same constant. */
-#define UNIV_ZIP_SIZE_SHIFT_MAX		15
+#define UNIV_ZIP_SIZE_SHIFT_MAX		16
 
 /* Define the Min, Max, Default page sizes. */
 /** Minimum Page Size Shift (power of 2) */
@@ -559,7 +559,7 @@ number indicate that a field contains a reference to an externally
 stored part of the field in the tablespace. The length field then
 contains the sum of the following flag and the locally stored len. */
 
-#define UNIV_EXTERN_STORAGE_FIELD (UNIV_SQL_NULL - UNIV_PAGE_SIZE_MAX)
+#define UNIV_EXTERN_STORAGE_FIELD (UNIV_SQL_NULL - UNIV_PAGE_SIZE_DEF)
 
 #if defined(__GNUC__) && (__GNUC__ > 2) && ! defined(__INTEL_COMPILER)
 #define HAVE_GCC_GT_2
