@@ -7719,6 +7719,10 @@ static int show_grants_callback(ACL_USER_BASE *role, void *data)
   return 0;
 }
 
+bool mysql_show_create_user(THD *thd, LEX_USER *lex_user)
+{
+  return FALSE;
+}
 
 /*
   SHOW GRANTS;  Send grants for a user to the client
