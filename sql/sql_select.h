@@ -1430,6 +1430,9 @@ public:
   int reinit();
   int init_execution();
   void exec();
+
+  void process_window_functions(List<Item> *curr_fields_list);
+
   void exec_inner();
   int destroy();
   void restore_tmp();
@@ -2154,4 +2157,5 @@ public:
 };
 
 int test_if_group_changed(List<Cached_item> &list);
+bool test_if_order_compatible(SQL_I_List<ORDER> &a, SQL_I_List<ORDER> &b);
 #endif /* SQL_SELECT_INCLUDED */
