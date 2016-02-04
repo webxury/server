@@ -170,7 +170,25 @@ public:
   enum Item::Type type() const { return Item::WINDOW_FUNC_ITEM; }
 
   enum enum_field_types field_type() const { return MYSQL_TYPE_DOUBLE; }
+  
+  /* 
+    TODO: Window functions are very special functions, so val_() methods have
+    special meaning for them:
 
+    - Phase#1: we run the join and put its result into temporary table. For 
+      window functions, we write NULL (or some other) values as placeholders.
+      
+    - Phase#2: executor does the scan in {PARTITION, ORDER BY} order of this 
+      window function. It calls appropriate methods to inform the window
+      function about rows entering/leaving the window. 
+      It calls window_func->val_int() so that current window function value 
+      can be saved and stored in the temp.table.
+
+    - Phase#3: the temporaty table is read and passed to query output. (Do 
+      I understand correctly that Item_window_func::val_XXX won't be called 
+      at all in this phase? Need to check)
+
+  */
   double val_real() {  return window_func->val_real(); }
 
   longlong val_int() { return window_func->val_int(); }
