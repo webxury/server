@@ -19263,6 +19263,7 @@ end_send(JOIN *join, JOIN_TAB *join_tab __attribute__((unused)),
   {
     /* Advance window functions to the next row before sending their values. */
     List_iterator_fast<Item> it(*join->fields);
+#if 0    
     for (Item *item= it++; item; item= it++)
     {
       if (item->type() == Item::WINDOW_FUNC_ITEM)
@@ -19270,6 +19271,7 @@ end_send(JOIN *join, JOIN_TAB *join_tab __attribute__((unused)),
         ((Item_window_func *) item)->advance_window();
       }
     }
+#endif
     if (join->table_count &&
         (join->join_tab->is_using_loose_index_scan() ||
          /*
