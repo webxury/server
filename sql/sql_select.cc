@@ -22461,6 +22461,11 @@ int test_if_item_cache_changed(List<Cached_item> &list)
 }
 
 
+/*
+  @return
+    -1         - Group not changed
+   value>=0    - Number of the component where the group changed
+*/
 
 int
 test_if_group_changed(List<Cached_item> &list)
