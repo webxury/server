@@ -12,27 +12,41 @@
 */
 
 
+/*
+   Window frame bound. This is a parsed representation of this syntax:
+     (UNBOUNDED | unsigned_value)  (PRECEDING | FOLLOWING)
+     CURRENT_ROW
+*/
+
 class Window_frame_bound : public Sql_alloc
 {
-
 public:
-
   enum Bound_precedence_type
   {
     PRECEDING,
     FOLLOWING
   };
 
+  /* Either PRECEDING or FOLLOWING */
   Bound_precedence_type precedence_type;
 
+  /*
+    NULL       - means CURRENT ROW
+    (Item*)1   - means "UNBOUNDED" (TODO switch to a named constant!)
+    other      - is an unsigned_value (TODO: does the parser really check?)
+  */
   Item *offset;
 
+
+  Window_frame_bound(enum Bound_precedence_type type_arg,
+                     Item *offset_arg) :
+    precedence_type(type_arg), offset(offset_arg)
+  {}
 };
 
 
 class Window_frame : public Sql_alloc
 {
-
 public:
 
   enum Frame_units

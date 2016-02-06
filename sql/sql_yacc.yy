@@ -11494,28 +11494,43 @@ window_frame_extent:
 window_frame_start:
           UNBOUNDED_SYM PRECEDING_SYM
           {
-            $$->precedence_type= Window_frame_bound::PRECEDING; 
-            $$->offset= (Item *) 1;
+            $$= new (thd->mem_root)
+                Window_frame_bound(Window_frame_bound::PRECEDING,
+                                   (Item*)1);
+            if ($$ == NULL)
+              MYSQL_YYABORT;
           } 
-        | CURRENT_SYM ROW_SYM { $$->offset= (Item *) 0; }
+        | CURRENT_SYM ROW_SYM
+          {
+            $$= new (thd->mem_root)
+                Window_frame_bound(Window_frame_bound::PRECEDING, NULL);
+            if ($$ == NULL)
+              MYSQL_YYABORT;
+          }
         | literal PRECEDING_SYM
           {
-            $$->precedence_type= Window_frame_bound::PRECEDING;
-            $$->offset= $1;
+            $$= new (thd->mem_root)
+                Window_frame_bound(Window_frame_bound::PRECEDING, $1);
+            if ($$ == NULL)
+              MYSQL_YYABORT;
           }
         ;
 
 window_frame_bound:
           window_frame_start { $$= $1; }
-        | UNBOUNDED_SYM FOLLOWING_SYM        
+        | UNBOUNDED_SYM FOLLOWING_SYM
           {
-            $$->precedence_type= Window_frame_bound::FOLLOWING; 
-            $$->offset= (Item *) 1;
-          } 
+            $$= new (thd->mem_root)
+                Window_frame_bound(Window_frame_bound::FOLLOWING, (Item*)1);
+            if ($$ == NULL)
+              MYSQL_YYABORT;
+          }
         | literal FOLLOWING_SYM
           {
-            $$->precedence_type= Window_frame_bound::FOLLOWING;
-            $$->offset= $1;
+            $$= new (thd->mem_root)
+                Window_frame_bound(Window_frame_bound::FOLLOWING, $1);
+            if ($$ == NULL)
+              MYSQL_YYABORT;
           }
         ;
 
