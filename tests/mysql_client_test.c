@@ -43,14 +43,22 @@
 
 static void set_reconnect(MYSQL *mysql, my_bool reconnect)
 {
+#ifdef EMBEDDED_LIBRARY
+  mysql->reconnect = reconnect;
+#else
   mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
+#endif
 }
 
 static my_bool get_reconnect(MYSQL *mysql)
 {
+#ifdef EMBEDDED_LIBRARY
+  return mysql->reconnect;
+#else
   my_bool reconnect;
   mysql_get_option(mysql, MYSQL_OPT_RECONNECT, &reconnect);
   return reconnect;
+#endif
 }
 
 static void client_query()
@@ -19368,7 +19376,7 @@ static void test_big_packet()
   /* We run the tests with a server with max packet size of 3200000 */
   size_t big_packet= 31000000L;
   int i;
-#ifndef LIBMARIADB
+#if (!defined LIBMARIADB) || (defined EMBEDDED_LIBRARY)
   MYSQL_PARAMETERS *mysql_params= mysql_get_parameters();
   long org_max_allowed_packet= *mysql_params->p_max_allowed_packet;
   long opt_net_buffer_length= *mysql_params->p_net_buffer_length;

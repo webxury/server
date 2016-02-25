@@ -8246,9 +8246,13 @@ end:
 
   /* Close the statement if reconnect, need new prepare */
   {
+#ifndef EMBEDDED_LIBRARY
     my_bool reconnect;
     mysql_get_option(mysql, MYSQL_OPT_RECONNECT, &reconnect);
     if (reconnect)
+#else
+    if (mysql->reconnect)
+#endif
     {
       mysql_stmt_close(stmt);
       cn->stmt= NULL;
