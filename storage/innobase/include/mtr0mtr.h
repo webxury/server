@@ -193,9 +193,12 @@ For 1 - 8 bytes, the flag value must give the length also! @{ */
 #define MLOG_FILE_WRITE_CRYPT_DATA ((byte)100)	/*!< log record for
 						writing/updating crypt data of
 						a tablespace */
-
+#define MLOG_FILE_WRITE_FSP_FLAGS ((byte)101)	/*!< log record for
+						writing/updating flags
+						a tablespace */
 #define EXTRA_CHECK_MLOG_NUMBER(x) \
-  ((x) == MLOG_FILE_WRITE_CRYPT_DATA)
+   ((x) == MLOG_FILE_WRITE_CRYPT_DATA || \
+    (x) == MLOG_FILE_WRITE_FSP_FLAGS)
 
 /* @} */
 

@@ -44,6 +44,8 @@ Created 10/21/1995 Heikki Tuuri
 #include "srv0start.h"
 #include "fil0fil.h"
 #include "fsp0fsp.h"
+#include "rem0rec.h"
+#include "dict0tableoptions.h"
 #include "fil0pagecompress.h"
 #include "buf0buf.h"
 #include "btr0types.h"

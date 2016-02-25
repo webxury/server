@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1995, 2012, Oracle and/or its affiliates. All Rights Reserved.
-Copyright (c) 2013, SkySQL Ab. All Rights Reserved.
+Copyright (c) 2013, 2016, MariaDB Corporation. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -64,9 +64,6 @@ fsp_flags_is_valid(
 	ulint	atomic_blobs = FSP_FLAGS_HAS_ATOMIC_BLOBS(flags);
 	ulint	page_ssize = FSP_FLAGS_GET_PAGE_SSIZE(flags);
 	ulint	unused = FSP_FLAGS_GET_UNUSED(flags);
-	ulint	page_compression = FSP_FLAGS_GET_PAGE_COMPRESSION(flags);
-	ulint	page_compression_level = FSP_FLAGS_GET_PAGE_COMPRESSION_LEVEL(flags);
-	ulint	atomic_writes = FSP_FLAGS_GET_ATOMIC_WRITES(flags);
 
 	DBUG_EXECUTE_IF("fsp_flags_is_valid_failure", return(false););
 
@@ -118,23 +115,6 @@ fsp_flags_is_valid(
 		fprintf(stderr, "InnoDB: Error: Tablespace flags %lu corrupted page_ssize %lu max %lu:%d\n",
 			flags, page_ssize, UNIV_PAGE_SIZE, UNIV_PAGE_SIZE_ORIG);
 		return(false);
-	}
-
-	/* Page compression level requires page compression and atomic blobs
-	to be set */
-        if (page_compression_level || page_compression) {
-		if (!page_compression || !atomic_blobs) {
-			fprintf(stderr, "InnoDB: Error: Tablespace flags %lu corrupted page_compression %lu\n"
-				"InnoDB: Error: page_compression_level %lu atomic_blobs %lu\n",
-				flags, page_compression, page_compression_level, atomic_blobs);
-			return(false);
-		}
-	}
-
-	if (atomic_writes > ATOMIC_WRITES_OFF) {
-		fprintf(stderr, "InnoDB: Error: Tablespace flags %lu corrupted atomic_writes %lu\n",
-			flags, atomic_writes);
-		return (false);
 	}
 
 #if UNIV_FORMAT_MAX != UNIV_FORMAT_B
@@ -195,10 +175,23 @@ fsp_flags_get_page_size(
 {
 	ulint	page_size = 0;
 	ulint	ssize = FSP_FLAGS_GET_PAGE_SSIZE(flags);
+	ulint	psize = FSP_FLAGS_GET_PAGE_SSIZE_MARIADB(flags);
+
+	if (ssize && UNIV_PAGE_SIZE == UNIV_PAGE_SIZE_ORIG) {
+		ssize = psize;
+	}
 
 	/* Convert from a 'log2 minus 9' to a page size in bytes. */
 	if (UNIV_UNLIKELY(ssize)) {
 		page_size = ((UNIV_ZIP_SIZE_MIN >> 1) << ssize);
+
+		if (page_size > UNIV_PAGE_SIZE_MAX) {
+			if (psize) {
+				page_size = ((UNIV_ZIP_SIZE_MIN >> 1) << psize);
+			} else {
+				page_size = UNIV_PAGE_SIZE_ORIG;
+			}
+		}
 
 		ut_ad(page_size <= UNIV_PAGE_SIZE_MAX);
 	} else {

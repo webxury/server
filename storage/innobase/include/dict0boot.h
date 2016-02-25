@@ -1,6 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1996, 2012, Oracle and/or its affiliates. All Rights Reserved.
+Copyright (c) 2015, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -323,6 +324,29 @@ enum dict_fld_sys_datafiles_enum {
 	DICT_FLD__SYS_DATAFILES__DB_ROLL_PTR		= 2,
 	DICT_FLD__SYS_DATAFILES__PATH			= 3,
 	DICT_NUM_FIELDS__SYS_DATAFILES			= 4
+};
+
+/* The columns in SYS_TABLE_OPTIONS */
+enum dict_col_sys_tableoptions_enum {
+	DICT_COL__SYS_TABLEOPTIONS__TABLE_ID		= 0,
+	DICT_COL__SYS_TABLEOPTIONS__PAGE_COMPRESSED	= 1,
+	DICT_COL__SYS_TABLEOPTIONS__PAGE_COMPRESSION_LEVEL		= 2,
+	DICT_COL__SYS_TABLEOPTIONS__ATOMIC_WRITES	= 3,
+	DICT_COL__SYS_TABLEOPTIONS__ENCRYPTED		= 4,
+	DICT_COL__SYS_TABLEOPTIONS__ENCRYPTION_KEY_ID	= 5,
+	DICT_NUM_COLS__SYS_TABLEOPTIONS			= 6
+};
+/* The field numbers in the SYS_TABLE_OPTIONS clustered index */
+enum dict_fld_sys_tableoptions_enum {
+	DICT_FLD__SYS_TABLEOPTIONS__TABLE_ID		= 0,
+	DICT_FLD__SYS_TABLEOPTIONS__DB_TRX_ID		= 1,
+	DICT_FLD__SYS_TABLEOPTIONS__DB_ROLL_PTR		= 2,
+	DICT_FLD__SYS_TABLEOPTIONS__PAGE_COMPRESSED	= 3,
+	DICT_FLD__SYS_TABLEOPTIONS__PAGE_COMPRESSION_LEVEL		= 4,
+	DICT_FLD__SYS_TABLEOPTIONS__ATOMIC_WRITES	= 5,
+	DICT_FLD__SYS_TABLEOPTIONS__ENCRYPTED		= 6,
+	DICT_FLD__SYS_TABLEOPTIONS__ENCRYPTION_KEY_ID	= 7,
+	DICT_NUM_FIELDS__SYS_TABLEOPTIONS		= 8
 };
 
 /* A number of the columns above occur in multiple tables.  These are the

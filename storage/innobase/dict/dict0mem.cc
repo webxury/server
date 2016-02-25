@@ -2,6 +2,7 @@
 
 Copyright (c) 1996, 2015, Oracle and/or its affiliates. All Rights Reserved.
 Copyright (c) 2012, Facebook Inc.
+Copyright (c) 2015, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -85,7 +86,6 @@ dict_mem_table_create(
 	mem_heap_t*	heap;
 
 	ut_ad(name);
-	ut_a(dict_tf_is_valid(flags));
 	ut_a(!(flags2 & ~DICT_TF2_BIT_MASK));
 
 	heap = mem_heap_create(DICT_HEAP_SIZE);
@@ -94,6 +94,11 @@ dict_mem_table_create(
 		mem_heap_zalloc(heap, sizeof(dict_table_t)));
 
 	table->heap = heap;
+
+	table->table_options =  static_cast<dict_tableoptions_t*>(
+		mem_heap_zalloc(heap, sizeof(dict_tableoptions_t)));
+
+	table->table_options->encryption_key_id = FIL_DEFAULT_ENCRYPTION_KEY;
 
 	table->flags = (unsigned int) flags;
 	table->flags2 = (unsigned int) flags2;

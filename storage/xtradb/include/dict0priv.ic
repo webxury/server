@@ -58,7 +58,7 @@ dict_table_get_low(
 	}
 
 	if (table == NULL) {
-		table = dict_load_table(table_name, TRUE, DICT_ERR_IGNORE_NONE);
+		table = dict_load_table(table_name, TRUE, DICT_ERR_IGNORE_NONE, NULL);
 	}
 
 	ut_ad(!table || table->cached);

@@ -391,6 +391,7 @@ SET(INNOBASE_SOURCES
 	dict/dict0mem.cc
 	dict/dict0stats.cc
 	dict/dict0stats_bg.cc
+	dict/dict0tableoptions.cc
 	dyn/dyn0dyn.cc
 	eval/eval0eval.cc
 	eval/eval0proc.cc

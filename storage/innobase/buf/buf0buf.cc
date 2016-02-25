@@ -2,7 +2,7 @@
 
 Copyright (c) 1995, 2015, Oracle and/or its affiliates. All Rights Reserved.
 Copyright (c) 2008, Google Inc.
-Copyright (c) 2013, 2015, MariaDB Corporation. All Rights Reserved.
+Copyright (c) 2013, 2016, MariaDB Corporation. All Rights Reserved.
 
 Portions of this file contain modifications contributed and copyrighted by
 Google, Inc. Those modifications are gratefully acknowledged and are described
@@ -59,6 +59,7 @@ Created 11/5/1995 Heikki Tuuri
 #include <numa.h>
 #include <numaif.h>
 #endif // HAVE_LIBNUMA
+#include "fil0fil.h"
 #include "fil0pagecompress.h"
 #include "ha_prototypes.h"
 #include "ut0byte.h"
@@ -4677,7 +4678,7 @@ corrupt:
 						"However key management plugin or used key_id %lu is not found or"
 						" used encryption algorithm or method does not match."
 						" Can't continue opening the table.",
-						bpage->key_version);
+						bpage->space, bpage->key_version);
 
 					if (bpage->space > TRX_SYS_SPACE) {
 						if (corrupted) {

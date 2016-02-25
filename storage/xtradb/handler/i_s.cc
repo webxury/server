@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 2007, 2015, Oracle and/or its affiliates. All Rights Reserved.
-Copyrigth (c) 2014, 2015, MariaDB Corporation
+Copyrigth (c) 2014, 2016, MariaDB Corporation
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -57,6 +57,7 @@ Modified Dec 29, 2014 Jan Lindström (Added sys_semaphore_waits)
 #include "ibuf0ibuf.h"
 #include "dict0mem.h"
 #include "dict0types.h"
+#include "dict0tableoptions.h"
 #include "ha_prototypes.h"
 #include "srv0start.h"
 #include "srv0srv.h"
@@ -2938,7 +2939,7 @@ i_s_fts_deleted_generic_fill(
 	deleted = fts_doc_ids_create();
 
 	user_table = dict_table_open_on_name(
-		fts_internal_tbl_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE);
+		fts_internal_tbl_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE, NULL);
 
 	if (!user_table) {
 		DBUG_RETURN(0);
@@ -3336,7 +3337,7 @@ i_s_fts_index_cache_fill(
 	}
 
 	user_table = dict_table_open_on_name(
-		fts_internal_tbl_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE);
+		fts_internal_tbl_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE, NULL);
 
 	if (!user_table) {
 		DBUG_RETURN(0);
@@ -3776,7 +3777,7 @@ i_s_fts_index_table_fill(
 	}
 
 	user_table = dict_table_open_on_name(
-		fts_internal_tbl_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE);
+		fts_internal_tbl_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE, NULL);
 
 	if (!user_table) {
 		DBUG_RETURN(0);
@@ -3926,7 +3927,7 @@ i_s_fts_config_fill(
 	fields = table->field;
 
 	user_table = dict_table_open_on_name(
-		fts_internal_tbl_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE);
+		fts_internal_tbl_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE, NULL);
 
 	if (!user_table) {
 		DBUG_RETURN(0);
@@ -9391,8 +9392,6 @@ static ST_FIELD_INFO	innodb_sys_semaphore_waits_fields_info[] =
 	END_OF_ST_FIELD_INFO
 };
 
-
-
 /*******************************************************************//**
 Bind the dynamic table INFORMATION_SCHEMA.INNODB_SYS_SEMAPHORE_WAITS
 @return 0 on success */
@@ -9587,3 +9586,229 @@ UNIV_INTERN struct st_mysql_plugin	i_s_innodb_changed_page_bitmaps =
         STRUCT_FLD(maturity, MariaDB_PLUGIN_MATURITY_BETA),
 };
 
+/**  SYS_TABLE_OPTIONS  ************************************************/
+/* Fields of the dynamic table INFORMATION_SCHEMA.INNODB_SYS_TABLE_OPTIONS */
+static ST_FIELD_INFO	innodb_sys_tableoptions_fields_info[] =
+{
+	// SYS_TABLE_OPTIONS_TABLE_ID	0
+	{STRUCT_FLD(field_name,		"TABLE_ID"),
+	 STRUCT_FLD(field_length,	MY_INT64_NUM_DECIMAL_DIGITS),
+	 STRUCT_FLD(field_type,		MYSQL_TYPE_LONGLONG),
+	 STRUCT_FLD(value,		0),
+	 STRUCT_FLD(field_flags,	MY_I_S_UNSIGNED),
+	 STRUCT_FLD(old_name,		""),
+	 STRUCT_FLD(open_method,	SKIP_OPEN_TABLE)},
+
+	// SYS_TABLE_OPTIONS_PAGE_COMPRESSED 1
+	{STRUCT_FLD(field_name,		"PAGE_COMPRESSED"),
+	 STRUCT_FLD(field_length,	7),
+	 STRUCT_FLD(field_type,		MYSQL_TYPE_STRING),
+	 STRUCT_FLD(value,		0),
+	 STRUCT_FLD(field_flags,	0),
+	 STRUCT_FLD(old_name,		""),
+	 STRUCT_FLD(open_method,	SKIP_OPEN_TABLE)},
+
+	// SYS_TABLE_OPTIONS_PAGE_COMPRESSION_LEVEL 2
+	{STRUCT_FLD(field_name,		"PAGE_COMPRESSION_LEVEL"),
+	 STRUCT_FLD(field_length,	MY_INT32_NUM_DECIMAL_DIGITS),
+	 STRUCT_FLD(field_type,		MYSQL_TYPE_LONG),
+	 STRUCT_FLD(value,		0),
+	 STRUCT_FLD(field_flags,	MY_I_S_UNSIGNED),
+	 STRUCT_FLD(old_name,		""),
+	 STRUCT_FLD(open_method,	SKIP_OPEN_TABLE)},
+
+	// SYS_TABLE_OPTIONS_ATOMIC_WRITES 3
+	{STRUCT_FLD(field_name,		"ATOMIC_WRITES"),
+	 STRUCT_FLD(field_length,	9),
+	 STRUCT_FLD(field_type,		MYSQL_TYPE_STRING),
+	 STRUCT_FLD(value,		0),
+	 STRUCT_FLD(field_flags,	0),
+	 STRUCT_FLD(old_name,		""),
+	 STRUCT_FLD(open_method,	SKIP_OPEN_TABLE)},
+
+	// SYS_TABLE_OPTIONS_ENCRYPTED 4
+	{STRUCT_FLD(field_name,		"ENCRYPTED"),
+	 STRUCT_FLD(field_length,	9),
+	 STRUCT_FLD(field_type,		MYSQL_TYPE_STRING),
+	 STRUCT_FLD(value,		0),
+	 STRUCT_FLD(field_flags,	0),
+	 STRUCT_FLD(old_name,		""),
+	 STRUCT_FLD(open_method,	SKIP_OPEN_TABLE)},
+
+	// SYS_TABLE_OPTIONS_ENCRYPTION_KEY_ID 5
+	{STRUCT_FLD(field_name,		"ENCRYPTION_KEY_ID"),
+	 STRUCT_FLD(field_length,	MY_INT32_NUM_DECIMAL_DIGITS),
+	 STRUCT_FLD(field_type,		MYSQL_TYPE_LONG),
+	 STRUCT_FLD(value,		0),
+	 STRUCT_FLD(field_flags,	MY_I_S_UNSIGNED),
+	 STRUCT_FLD(old_name,		""),
+	 STRUCT_FLD(open_method,	SKIP_OPEN_TABLE)},
+
+	END_OF_ST_FIELD_INFO
+};
+
+/*******************************************************************//**
+Function to go through each record in SYS_TABLE_OPTIONS table, and fill the
+information_schema.innodb_sys_table_options table with related table information
+@return 0 on success */
+static
+int
+i_s_dict_fill_sys_table_options(
+/*============================*/
+	THD*		thd,	/*!< in: thread */
+	TABLE_LIST*	tables,	/*!< in/out: tables to fill */
+	Item*		)	/*!< in: condition (not used) */
+{
+	btr_pcur_t	pcur;
+	const rec_t*	rec;
+	mem_heap_t*	heap;
+	mtr_t		mtr;
+
+	DBUG_ENTER("i_s_sys_table_options_fill_table");
+	RETURN_IF_INNODB_NOT_STARTED(tables->schema_table_name);
+
+	/* deny access to user without PROCESS_ACL privilege */
+	if (check_global_access(thd, PROCESS_ACL, true)) {
+		DBUG_RETURN(0);
+	}
+
+	heap = mem_heap_create(1000);
+	mutex_enter(&(dict_sys->mutex));
+	mtr_start(&mtr);
+
+	rec = dict_startscan_system(&pcur, &mtr, SYS_TABLE_OPTIONS);
+
+	while (rec) {
+		const char*	err_msg;
+		dict_tableoptions_t options;
+
+		/* Create and populate a dict_tableoptions_t structure with
+		information from SYS_TABLE_OPTIONS row */
+		memset(&options, 0, sizeof(dict_tableoptions_t));
+
+		err_msg = dict_process_sys_tableoptions(
+			heap, rec, &options);
+
+		mtr_commit(&mtr);
+		mutex_exit(&dict_sys->mutex);
+
+		if (!err_msg) {
+			Field**		fields = tables->table->field;
+
+			OK(fields[SYS_TABLE_OPTIONS_TABLE_ID]->store((longlong) options.table_id));
+			OK(fields[SYS_TABLE_OPTIONS_PAGE_COMPRESSION_LEVEL]->store((ulint)options.page_compression_level));
+			OK(fields[SYS_TABLE_OPTIONS_ENCRYPTION_KEY_ID]->store((ulint)options.encryption_key_id));
+
+			if (options.page_compressed) {
+				OK(field_store_string(fields[SYS_TABLE_OPTIONS_PAGE_COMPRESSED], "YES"));
+			} else {
+				OK(field_store_string(fields[SYS_TABLE_OPTIONS_PAGE_COMPRESSED], "NO"));
+			}
+
+			if (options.encryption == FIL_SPACE_ENCRYPTION_DEFAULT) {
+				OK(field_store_string(fields[SYS_TABLE_OPTIONS_ENCRYPTED], "DEFAULT"));
+			} else if (options.encryption == FIL_SPACE_ENCRYPTION_ON) {
+				OK(field_store_string(fields[SYS_TABLE_OPTIONS_ENCRYPTED], "ON"));
+			} else {
+				OK(field_store_string(fields[SYS_TABLE_OPTIONS_ENCRYPTED], "OFF"));
+			}
+
+			if (options.atomic_writes == ATOMIC_WRITES_DEFAULT) {
+				OK(field_store_string(fields[SYS_TABLE_OPTIONS_ATOMIC_WRITES], "DEFAULT"));
+			} else if (options.atomic_writes == ATOMIC_WRITES_ON) {
+				OK(field_store_string(fields[SYS_TABLE_OPTIONS_ATOMIC_WRITES], "ON"));
+			} else {
+				OK(field_store_string(fields[SYS_TABLE_OPTIONS_ATOMIC_WRITES], "OFF"));
+			}
+
+			OK(schema_table_store_record(thd, tables->table));
+
+		} else {
+			push_warning_printf(thd, Sql_condition::WARN_LEVEL_WARN,
+					    ER_CANT_FIND_SYSTEM_REC, "%s",
+					    err_msg);
+		}
+
+		mem_heap_empty(heap);
+
+		/* Get the next record */
+		mutex_enter(&dict_sys->mutex);
+		mtr_start(&mtr);
+		rec = dict_getnext_system(&pcur, &mtr);
+	}
+
+	mtr_commit(&mtr);
+	mutex_exit(&dict_sys->mutex);
+	mem_heap_free(heap);
+
+	DBUG_RETURN(0);
+}
+/*******************************************************************//**
+Bind the dynamic table INFORMATION_SCHEMA.INNODB_SYS_TABLE_OPTIONS
+@return 0 on success */
+static
+int
+innodb_sys_table_options_init(
+/*============================*/
+	void*	p)	/*!< in/out: table schema object */
+{
+	ST_SCHEMA_TABLE*	schema;
+
+	DBUG_ENTER("innodb_sys_table_options_init");
+
+	schema = (ST_SCHEMA_TABLE*) p;
+
+	schema->fields_info = innodb_sys_tableoptions_fields_info;
+	schema->fill_table = i_s_dict_fill_sys_table_options;
+
+	DBUG_RETURN(0);
+}
+
+UNIV_INTERN struct st_mysql_plugin	i_s_innodb_sys_table_options =
+{
+	/* the plugin type (a MYSQL_XXX_PLUGIN value) */
+	/* int */
+	STRUCT_FLD(type, MYSQL_INFORMATION_SCHEMA_PLUGIN),
+
+	/* pointer to type-specific plugin descriptor */
+	/* void* */
+	STRUCT_FLD(info, &i_s_info),
+
+	/* plugin name */
+	/* const char* */
+	STRUCT_FLD(name, "INNODB_SYS_TABLE_OPTIONS"),
+
+	/* plugin author (for SHOW PLUGINS) */
+	/* const char* */
+	STRUCT_FLD(author, maria_plugin_author),
+
+	/* general descriptive text (for SHOW PLUGINS) */
+	/* const char* */
+	STRUCT_FLD(descr, "InnoDB SYS_TABLE_OPTIONS"),
+
+	/* the plugin license (PLUGIN_LICENSE_XXX) */
+	/* int */
+	STRUCT_FLD(license, PLUGIN_LICENSE_GPL),
+
+	/* the function to invoke when plugin is loaded */
+	/* int (*)(void*); */
+	STRUCT_FLD(init, innodb_sys_table_options_init),
+
+	/* the function to invoke when plugin is unloaded */
+	/* int (*)(void*); */
+	STRUCT_FLD(deinit, i_s_common_deinit),
+
+	/* plugin version (for SHOW PLUGINS) */
+	/* unsigned int */
+	STRUCT_FLD(version, INNODB_VERSION_SHORT),
+
+	/* struct st_mysql_show_var* */
+	STRUCT_FLD(status_vars, NULL),
+
+	/* struct st_mysql_sys_var** */
+	STRUCT_FLD(system_vars, NULL),
+
+        /* Maria extension */
+	STRUCT_FLD(version_info, INNODB_VERSION_STR),
+        STRUCT_FLD(maturity, MariaDB_PLUGIN_MATURITY_BETA),
+};

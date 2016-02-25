@@ -1163,8 +1163,10 @@ dict_table_open_on_name(
 					indexes after an aborted online
 					index creation */
 	dict_err_ignore_t
-			ignore_err)	/*!< in: error to be ignored when
+			ignore_err,	/*!< in: error to be ignored when
 					loading a table definition */
+	dict_tableoptions_t*
+			options)	/*!< in: table options */
 {
 	dict_table_t*	table;
 
@@ -1178,12 +1180,22 @@ dict_table_open_on_name(
 	table = dict_table_check_if_in_cache_low(table_name);
 
 	if (table == NULL) {
-		table = dict_load_table(table_name, TRUE, ignore_err);
+		table = dict_load_table(table_name, TRUE, ignore_err, options);
 	}
 
 	ut_ad(!table || table->cached);
 
 	if (table != NULL) {
+
+		/* If table is encrypted return table */
+		if (ignore_err == DICT_ERR_IGNORE_NONE
+			&& !table->is_encrypted && options) {
+			if ((options->encryption == FIL_SPACE_ENCRYPTION_ON ||
+			    (options->encryption == FIL_SPACE_ENCRYPTION_DEFAULT && srv_encrypt_tables))
+				&& !encryption_key_id_exists((unsigned int)options->encryption_key_id)) {
+				table->is_encrypted = true;
+			}
+		}
 
 		/* If table is encrypted return table */
 		if (ignore_err == DICT_ERR_IGNORE_NONE

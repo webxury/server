@@ -1,6 +1,6 @@
 /*****************************************************************************
 
-Copyright (C) 2013, 2015 MariaDB Corporation. All Rights Reserved.
+Copyright (C) 2013, 2016, MariaDB Corporation. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -31,41 +31,58 @@ Created 11/12/2013 Jan Lindström jan.lindstrom@skysql.com
 ***********************************************************************/
 
 /*******************************************************************//**
-Returns the page compression level flag of the space, or 0 if the space
+Returns the page compression level of the space, or 0 if the space
 is not compressed. The tablespace must be cached in the memory cache.
-@return	page compression level if page compressed, ULINT_UNDEFINED if space not found */
-UNIV_INTERN
+@return	page compression level, 0 if space not found */
+UNIV_INLINE
 ulint
 fil_space_get_page_compression_level(
 /*=================================*/
-	ulint	id);	/*!< in: space id */
+	fil_space_t* space);	/*!< in: space */
 /*******************************************************************//**
-Returns the page compression flag of the space, or false if the space
+Returns the page compression level of the space, or 0 if the space
 is not compressed. The tablespace must be cached in the memory cache.
-@return	true if page compressed, false if not or space not found */
-UNIV_INTERN
+@return	page compression level, 0 if space not found */
+UNIV_INLINE
+ulint
+fil_space_get_page_compression_level(
+/*=================================*/
+	ulint	space_id);	/*!< in: space id*/
+/*******************************************************************//**
+Extract the page compression from space.
+@return true if space is page compressed, false if space is not found
+or space is not page compressed. */
+UNIV_INLINE
 ibool
 fil_space_is_page_compressed(
 /*=========================*/
-	ulint	id);	/*!< in: space id */
+	ulint	space_id);	/*!< in: space id*/
 /*******************************************************************//**
-Returns the page compression flag of the space, or false if the space
-is not compressed. The tablespace must be cached in the memory cache.
-@return	true if page compressed, false if not or space not found */
-UNIV_INTERN
+Extract the page compression from space.
+@return true if space is page compressed, false if space is not found
+or space is not page compressed. */
+UNIV_INLINE
 ibool
-fil_space_get_page_compressed(
+fil_space_is_page_compressed(
 /*=========================*/
-	fil_space_t*	space);	/*!< in: space id */
+	fil_space_t* space);	/*!< in: space */
+
 /*******************************************************************//**
-Returns the atomic writes flag of the space, or false if the space
-is not using atomic writes. The tablespace must be cached in the memory cache.
-@return	atomic write table option value */
-UNIV_INTERN
+Extract the atomic writes option from space.
+@return atomic_writes option */
+UNIV_INLINE
 atomic_writes_t
 fil_space_get_atomic_writes(
-/*=========================*/
-	ulint	id);	/*!< in: space id */
+/*========================*/
+	fil_space_t* space);	/*!< in: space */
+/*******************************************************************//**
+Extract the atomic writes option from space.
+@return atomic_writes option */
+UNIV_INLINE
+atomic_writes_t
+fil_space_get_atomic_writes(
+/*========================*/
+	ulint	space_id);	/*!< in: space id*/
 /*******************************************************************//**
 Find out wheather the page is index page or not
 @return	true if page type index page, false if not */

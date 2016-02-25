@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 2012, 2015, Oracle and/or its affiliates. All Rights Reserved.
-Copyright (c) 2015, MariaDB Corporation.
+Copyright (c) 2015, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -649,16 +649,6 @@ struct FetchIndexRootPages : public AbstractCallback {
 		dberr_t		err;
 		rec_format_t	ibd_rec_format;
 		rec_format_t	table_rec_format;
-
-		if (!dict_tf_is_valid(ibd_table_flags)) {
-
-			ib_errf(m_trx->mysql_thd, IB_LOG_LEVEL_ERROR,
-				ER_TABLE_SCHEMA_MISMATCH,
-				".ibd file has invlad table flags: %lx",
-				ibd_table_flags);
-
-			return(DB_CORRUPTION);
-		}
 
 		ibd_rec_format = dict_tf_get_rec_format(ibd_table_flags);
 		table_rec_format = dict_tf_get_rec_format(m_table->flags);
@@ -3644,7 +3634,7 @@ row_import_for_mysql(
 	err = fil_open_single_table_tablespace(
 		true, true, table->space,
 		dict_tf_to_fsp_flags(table->flags),
-		table->name, filepath, table);
+		table->name, filepath, table, table->table_options);
 
 	DBUG_EXECUTE_IF("ib_import_open_tablespace_failure",
 			err = DB_TABLESPACE_NOT_FOUND;);

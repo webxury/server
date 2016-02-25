@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 2000, 2012, Oracle and/or its affiliates. All Rights Reserved.
-Copyright (c) 2013, 2014, SkySQL Ab. All Rights Reserved.
+Copyright (c) 2013, 2016, MariaDB Corporation. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -201,7 +201,9 @@ class ha_innobase: public handler
 			     char* temp_path,
 			     char* remote_path);
 	const char* check_table_options(THD *thd, TABLE* table,
-		HA_CREATE_INFO*	create_info, const bool use_tablespace, const ulint file_format);
+		HA_CREATE_INFO*	create_info, const bool use_tablespace, const ulint file_format,
+		dict_tableoptions_t* table_options);
+	void set_table_options(THD *thd, TABLE*table, dict_tableoptions_t* table_options);
 	int create(const char *name, register TABLE *form,
 					HA_CREATE_INFO *create_info);
 	int truncate();

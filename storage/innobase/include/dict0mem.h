@@ -2,7 +2,7 @@
 
 Copyright (c) 1996, 2015, Oracle and/or its affiliates. All Rights Reserved.
 Copyright (c) 2012, Facebook Inc.
-Copyright (c) 2013, 2015, MariaDB Corporation.
+Copyright (c) 2013, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -58,6 +58,7 @@ Created 1/8/1996 Heikki Tuuri
 
 /* Forward declaration. */
 struct ib_rbt_t;
+struct dict_tableoptions_t;
 
 /** Type flags of an index: OR'ing of the flags is allowed to define a
 combination of types */
@@ -129,34 +130,11 @@ This flag prevents older engines from attempting to open the table and
 allows InnoDB to update_create_info() accordingly. */
 #define DICT_TF_WIDTH_DATA_DIR		1
 
-/**
-Width of the page compression flag
-*/
-#define DICT_TF_WIDTH_PAGE_COMPRESSION  1
-#define DICT_TF_WIDTH_PAGE_COMPRESSION_LEVEL 4
-
-/**
-Width of the page encryption flag
-*/
-#define DICT_TF_WIDTH_PAGE_ENCRYPTION  1
-#define DICT_TF_WIDTH_PAGE_ENCRYPTION_KEY 8
-
-/**
-Width of atomic writes flag
-DEFAULT=0, ON = 1, OFF = 2
-*/
-#define DICT_TF_WIDTH_ATOMIC_WRITES 2
-
 /** Width of all the currently known table flags */
 #define DICT_TF_BITS	(DICT_TF_WIDTH_COMPACT		\
 			+ DICT_TF_WIDTH_ZIP_SSIZE	\
 			+ DICT_TF_WIDTH_ATOMIC_BLOBS	\
-			+ DICT_TF_WIDTH_DATA_DIR        \
-			+ DICT_TF_WIDTH_PAGE_COMPRESSION \
-			+ DICT_TF_WIDTH_PAGE_COMPRESSION_LEVEL \
-		        + DICT_TF_WIDTH_ATOMIC_WRITES \
-		        + DICT_TF_WIDTH_PAGE_ENCRYPTION \
-		        + DICT_TF_WIDTH_PAGE_ENCRYPTION_KEY)
+			+ DICT_TF_WIDTH_DATA_DIR)
 
 /** A mask of all the known/used bits in table flags */
 #define DICT_TF_BIT_MASK	(~(~0 << DICT_TF_BITS))
@@ -172,23 +150,14 @@ DEFAULT=0, ON = 1, OFF = 2
 /** Zero relative shift position of the DATA_DIR field */
 #define DICT_TF_POS_DATA_DIR		(DICT_TF_POS_ATOMIC_BLOBS	\
 					+ DICT_TF_WIDTH_ATOMIC_BLOBS)
-/** Zero relative shift position of the PAGE_COMPRESSION field */
-#define DICT_TF_POS_PAGE_COMPRESSION	(DICT_TF_POS_DATA_DIR	\
-		                        + DICT_TF_WIDTH_DATA_DIR)
-/** Zero relative shift position of the PAGE_COMPRESSION_LEVEL field */
-#define DICT_TF_POS_PAGE_COMPRESSION_LEVEL	(DICT_TF_POS_PAGE_COMPRESSION	\
-					+ DICT_TF_WIDTH_PAGE_COMPRESSION)
-/** Zero relative shift position of the ATOMIC_WRITES field */
-#define DICT_TF_POS_ATOMIC_WRITES	(DICT_TF_POS_PAGE_COMPRESSION_LEVEL \
-					+ DICT_TF_WIDTH_PAGE_COMPRESSION_LEVEL)
-/** Zero relative shift position of the PAGE_ENCRYPTION field */
-#define DICT_TF_POS_PAGE_ENCRYPTION	(DICT_TF_POS_ATOMIC_WRITES	\
-		                        + DICT_TF_WIDTH_ATOMIC_WRITES)
-/** Zero relative shift position of the PAGE_ENCRYPTION_KEY field */
-#define DICT_TF_POS_PAGE_ENCRYPTION_KEY	(DICT_TF_POS_PAGE_ENCRYPTION	\
-		                        + DICT_TF_WIDTH_PAGE_ENCRYPTION)
-#define DICT_TF_POS_UNUSED		(DICT_TF_POS_PAGE_ENCRYPTION_KEY     \
-		                        + DICT_TF_WIDTH_PAGE_ENCRYPTION_KEY)
+/** Zero relative shift position of the start of the UNUSED bits */
+#define DICT_TF_POS_UNUSED		(DICT_TF_POS_DATA_DIR		\
+					+ DICT_TF_WIDTH_DATA_DIR)
+
+/** Zero relative shift position of the start of the MARIADB bits */
+#define DICT_TF_POS_UNUSED_MARIADB	(DICT_TF_POS_DATA_DIR     \
+                                        + 1 + 1 + 4 + 1 + 8 + 2)
+
 
 /** Bit mask of the COMPACT field */
 #define DICT_TF_MASK_COMPACT				\
@@ -206,26 +175,6 @@ DEFAULT=0, ON = 1, OFF = 2
 #define DICT_TF_MASK_DATA_DIR				\
 		((~(~0 << DICT_TF_WIDTH_DATA_DIR))	\
 		<< DICT_TF_POS_DATA_DIR)
-/** Bit mask of the PAGE_COMPRESSION field */
-#define DICT_TF_MASK_PAGE_COMPRESSION			\
-		((~(~0 << DICT_TF_WIDTH_PAGE_COMPRESSION)) \
-		<< DICT_TF_POS_PAGE_COMPRESSION)
-/** Bit mask of the PAGE_COMPRESSION_LEVEL field */
-#define DICT_TF_MASK_PAGE_COMPRESSION_LEVEL		\
-		((~(~0 << DICT_TF_WIDTH_PAGE_COMPRESSION_LEVEL)) \
-		<< DICT_TF_POS_PAGE_COMPRESSION_LEVEL)
-/** Bit mask of the ATOMIC_WRITES field */
-#define DICT_TF_MASK_ATOMIC_WRITES		\
-		((~(~0 << DICT_TF_WIDTH_ATOMIC_WRITES)) \
-		<< DICT_TF_POS_ATOMIC_WRITES)
-/** Bit mask of the PAGE_ENCRYPTION field */
-#define DICT_TF_MASK_PAGE_ENCRYPTION			\
-		((~(~0 << DICT_TF_WIDTH_PAGE_ENCRYPTION))	\
-		<< DICT_TF_POS_PAGE_ENCRYPTION)
-/** Bit mask of the PAGE_ENCRYPTION_KEY field */
-#define DICT_TF_MASK_PAGE_ENCRYPTION_KEY		\
-		((~(~0 << DICT_TF_WIDTH_PAGE_ENCRYPTION_KEY)) \
-		<< DICT_TF_POS_PAGE_ENCRYPTION_KEY)
 
 /** Return the value of the COMPACT field */
 #define DICT_TF_GET_COMPACT(flags)			\
@@ -239,34 +188,17 @@ DEFAULT=0, ON = 1, OFF = 2
 #define DICT_TF_HAS_ATOMIC_BLOBS(flags)			\
 		((flags & DICT_TF_MASK_ATOMIC_BLOBS)	\
 		>> DICT_TF_POS_ATOMIC_BLOBS)
-/** Return the value of the ATOMIC_BLOBS field */
+/** Return the value of the HAS_DATA_DIR field */
 #define DICT_TF_HAS_DATA_DIR(flags)			\
 		((flags & DICT_TF_MASK_DATA_DIR)	\
 		>> DICT_TF_POS_DATA_DIR)
-/** Return the value of the PAGE_COMPRESSION field */
-#define DICT_TF_GET_PAGE_COMPRESSION(flags)	       \
-		((flags & DICT_TF_MASK_PAGE_COMPRESSION) \
-		>> DICT_TF_POS_PAGE_COMPRESSION)
-/** Return the value of the PAGE_COMPRESSION_LEVEL field */
-#define DICT_TF_GET_PAGE_COMPRESSION_LEVEL(flags)       \
-		((flags & DICT_TF_MASK_PAGE_COMPRESSION_LEVEL)	\
-		>> DICT_TF_POS_PAGE_COMPRESSION_LEVEL)
-/** Return the value of the ATOMIC_WRITES field */
-#define DICT_TF_GET_ATOMIC_WRITES(flags)       \
-		((flags & DICT_TF_MASK_ATOMIC_WRITES)	\
-		>> DICT_TF_POS_ATOMIC_WRITES)
-/** Return the contents of the PAGE_ENCRYPTION field */
-#define DICT_TF_GET_PAGE_ENCRYPTION(flags)			\
-		((flags & DICT_TF_MASK_PAGE_ENCRYPTION) \
-		>> DICT_TF_POS_PAGE_ENCRYPTION)
-/** Return the contents of the PAGE_ENCRYPTION KEY field */
-#define DICT_TF_GET_PAGE_ENCRYPTION_KEY(flags)			\
-		((flags & DICT_TF_MASK_PAGE_ENCRYPTION_KEY) \
-		>> DICT_TF_POS_PAGE_ENCRYPTION_KEY)
 
 /** Return the contents of the UNUSED bits */
 #define DICT_TF_GET_UNUSED(flags)			\
 		(flags >> DICT_TF_POS_UNUSED)
+/** Return the contents of the UNUSED bits */
+#define DICT_TF_GET_UNUSED_MARIADB(flags)		\
+		(flags >> DICT_TF_POS_UNUSED_MARIADB)
 /* @} */
 
 /** @brief Table Flags set number 2.
@@ -1019,6 +951,7 @@ struct dict_table_t{
 	char*		name;	/*!< table name */
 	void*		thd;		/*!< thd */
 	fil_space_crypt_t *crypt_data; /*!< crypt data if present */
+	dict_tableoptions_t* table_options; /*!< table options */
 	const char*	dir_path_of_temp_table;/*!< NULL or the directory path
 				where a TEMPORARY table that was explicitly
 				created by a user should be placed if

@@ -1,6 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 2000, 2015, Oracle and/or its affiliates. All Rights Reserved.
+Copyright (c) 2015, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -47,6 +48,7 @@ Created 9/17/2000 Heikki Tuuri
 #include "dict0boot.h"
 #include "dict0stats.h"
 #include "dict0stats_bg.h"
+#include "dict0tableoptions.h"
 #include "trx0roll.h"
 #include "trx0purge.h"
 #include "trx0rec.h"
@@ -2246,9 +2248,7 @@ row_create_table_for_mysql(
 				(will be freed, or on DB_SUCCESS
 				added to the data dictionary cache) */
 	trx_t*		trx,	/*!< in/out: transaction */
-	bool		commit,	/*!< in: if true, commit the transaction */
-	fil_encryption_t mode,	/*!< in: encryption mode */
-	ulint		key_id)	/*!< in: encryption key_id */
+	bool		commit)	/*!< in: if true, commit the transaction */
 {
 	tab_node_t*	node;
 	mem_heap_t*	heap;
@@ -2361,7 +2361,7 @@ err_exit:
 		ut_ad(strstr(table->name, "/FTS_") != NULL);
 	}
 
-	node = tab_create_graph_create(table, heap, commit, mode, key_id);
+	node = tab_create_graph_create(table, heap, commit);
 
 	thr = pars_complete_graph_for_exec(node, trx, heap);
 
@@ -2409,7 +2409,7 @@ err_exit:
 		fputs(" because tablespace full\n", stderr);
 
 		if (dict_table_open_on_name(table->name, TRUE, FALSE,
-					    DICT_ERR_IGNORE_NONE)) {
+					    DICT_ERR_IGNORE_NONE, NULL)) {
 
 			/* Make things easy for the drop table code. */
 
@@ -2511,7 +2511,7 @@ row_create_index_for_mysql(
 	is_fts = (index->type == DICT_FTS);
 
 	table = dict_table_open_on_name(table_name, TRUE, TRUE,
-					DICT_ERR_IGNORE_NONE);
+					DICT_ERR_IGNORE_NONE, NULL);
 
 	trx_start_if_not_started_xa(trx);
 
@@ -2744,7 +2744,7 @@ loop:
 	}
 
 	table = dict_table_open_on_name(drop->table_name, FALSE, FALSE,
-					DICT_ERR_IGNORE_NONE);
+					DICT_ERR_IGNORE_NONE, NULL);
 
 	if (table == NULL) {
 		/* If for some reason the table has already been dropped
@@ -2923,7 +2923,7 @@ row_discard_tablespace_begin(
 	dict_table_t*	table;
 
 	table = dict_table_open_on_name(
-		name, TRUE, FALSE, DICT_ERR_IGNORE_NONE);
+		name, TRUE, FALSE, DICT_ERR_IGNORE_NONE, NULL);
 
 	if (table) {
 		dict_stats_wait_bg_to_stop_using_table(table, trx);
@@ -3505,15 +3505,13 @@ row_truncate_table_for_mysql(
 		fil_space_crypt_t* crypt_data;
 		ulint	space	= table->space;
 		ulint	flags	= fil_space_get_flags(space);
-		ulint	key_id  = FIL_DEFAULT_ENCRYPTION_KEY;
-		fil_encryption_t mode = FIL_SPACE_ENCRYPTION_DEFAULT;
 
 		dict_get_and_save_data_dir_path(table, true);
 		crypt_data = fil_space_get_crypt_data(space);
 
 		if (crypt_data) {
-			key_id = crypt_data->key_id;
-			mode = crypt_data->encryption;
+			table->table_options->encryption_key_id = crypt_data->key_id;
+			table->table_options->encryption = crypt_data->encryption;
 		}
 
 		if (flags != ULINT_UNDEFINED
@@ -3534,7 +3532,7 @@ row_truncate_table_for_mysql(
 				    table->data_dir_path,
 				    flags, table->flags2,
 				    FIL_IBD_FILE_INITIAL_SIZE,
-				    mode, key_id)
+				    table)
 			    != DB_SUCCESS) {
 				dict_table_x_unlock_indexes(table);
 
@@ -3937,7 +3935,8 @@ row_drop_table_for_mysql(
 	table = dict_table_open_on_name(
 		name, TRUE, FALSE,
 		static_cast<dict_err_ignore_t>(
-			DICT_ERR_IGNORE_INDEX_ROOT | DICT_ERR_IGNORE_CORRUPT));
+			DICT_ERR_IGNORE_INDEX_ROOT | DICT_ERR_IGNORE_CORRUPT),
+		NULL);
 
 	if (!table) {
 		err = DB_TABLE_NOT_FOUND;
@@ -4309,6 +4308,11 @@ row_drop_table_for_mysql(
 			   "END;\n"
 			   , FALSE, trx);
 
+	/* Delete row from SYS_TABLE_OPTIONS if it exists */
+	if (err == DB_SUCCESS) {
+		err = dict_delete_tableoptions(table, trx, true);
+	}
+
 	switch (err) {
 		ibool	is_temp;
 
@@ -4383,7 +4387,7 @@ row_drop_table_for_mysql(
 		dict_table_remove_from_cache(table);
 
 		if (dict_load_table(tablename, TRUE,
-				    DICT_ERR_IGNORE_NONE) != NULL) {
+				    DICT_ERR_IGNORE_NONE, NULL) != NULL) {
 			ut_print_timestamp(stderr);
 			fputs("  InnoDB: Error: not able to remove table ",
 			      stderr);
@@ -4701,7 +4705,7 @@ loop:
 		table = dict_table_open_on_name(
 			table_name, TRUE, FALSE, static_cast<dict_err_ignore_t>(
 				DICT_ERR_IGNORE_INDEX_ROOT
-				| DICT_ERR_IGNORE_CORRUPT));
+				| DICT_ERR_IGNORE_CORRUPT), NULL);
 
 		if (!table) {
 			ib_logf(IB_LOG_LEVEL_ERROR,
@@ -4929,7 +4933,7 @@ row_rename_table_for_mysql(
 	dict_locked = trx->dict_operation_lock_mode == RW_X_LATCH;
 
 	table = dict_table_open_on_name(old_name, dict_locked, FALSE,
-					DICT_ERR_IGNORE_NONE);
+					DICT_ERR_IGNORE_NONE, NULL);
 
 	if (!table) {
 		err = DB_TABLE_NOT_FOUND;

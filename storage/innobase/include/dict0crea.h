@@ -1,6 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1996, 2014, Oracle and/or its affiliates. All Rights Reserved.
+Copyright (c) 2015, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -44,10 +45,8 @@ tab_create_graph_create(
 	dict_table_t*	table,	/*!< in: table to create, built as a memory data
 				structure */
 	mem_heap_t*	heap,	/*!< in: heap where created */
-	bool		commit, /*!< in: true if the commit node should be
+	bool		commit);/*!< in: true if the commit node should be
 				added to the query graph */
-	fil_encryption_t mode,	/*!< in: encryption mode */
-	ulint		key_id);/*!< in: encryption key_id */
 /*********************************************************************//**
 Creates an index create graph.
 @return	own: index create node */
@@ -204,6 +203,17 @@ dict_foreign_def_get(
 	dict_foreign_t*	foreign,/*!< in: foreign */
 	trx_t*		trx);	/*!< in: trx */
 
+/****************************************************************//**
+Creates the sys_table_options system tables inside InnoDB
+at server bootstrap or server start if it is not found or is
+not of the right form.
+@return	DB_SUCCESS or error code */
+UNIV_INTERN
+dberr_t
+dict_create_or_check_sys_table_options(void)
+/*========================================*/
+__attribute__((warn_unused_result));
+
 /* Table create node structure */
 struct tab_node_t{
 	que_common_t	common;	/*!< node type: QUE_NODE_TABLE_CREATE */
@@ -222,8 +232,6 @@ struct tab_node_t{
 	/* Local storage for this graph node */
 	ulint		state;	/*!< node execution state */
 	ulint		col_no;	/*!< next column definition to insert */
-	ulint		key_id;	/*!< encryption key_id */
-	fil_encryption_t mode;	/*!< encryption mode */
 	mem_heap_t*	heap;	/*!< memory heap used as auxiliary storage */
 };
 

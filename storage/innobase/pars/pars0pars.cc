@@ -1,6 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1996, 2013, Oracle and/or its affiliates. All Rights Reserved.
+Copyright (c) 2013, 2016, MariaDB Corporation. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -860,7 +861,7 @@ pars_retrieve_table_def(
 		sym_node->token_type = SYM_TABLE_REF_COUNTED;
 
 		sym_node->table = dict_table_open_on_name(
-			sym_node->name, TRUE, FALSE, DICT_ERR_IGNORE_NONE);
+			sym_node->name, TRUE, FALSE, DICT_ERR_IGNORE_NONE, NULL);
 
 		ut_a(sym_node->table != NULL);
 	}
@@ -2019,8 +2020,7 @@ pars_create_table(
 		column = static_cast<sym_node_t*>(que_node_get_next(column));
 	}
 
-	node = tab_create_graph_create(table, pars_sym_tab_global->heap, true,
-		FIL_SPACE_ENCRYPTION_DEFAULT, FIL_DEFAULT_ENCRYPTION_KEY);
+	node = tab_create_graph_create(table, pars_sym_tab_global->heap, true);
 
 	table_sym->resolved = TRUE;
 	table_sym->token_type = SYM_TABLE;

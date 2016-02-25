@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 2007, 2013, Oracle and/or its affiliates. All Rights Reserved.
-Copyrigth (c) 2014, 2015, MariaDB Corporation
+Copyrigth (c) 2014, 2016, MariaDB Corporation
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -63,6 +63,7 @@ extern struct st_maria_plugin	i_s_innodb_mutexes;
 extern struct st_maria_plugin	i_s_innodb_tablespaces_encryption;
 extern struct st_maria_plugin	i_s_innodb_tablespaces_scrubbing;
 extern struct st_maria_plugin	i_s_innodb_sys_semaphore_waits;
+extern struct st_maria_plugin	i_s_innodb_sys_table_options;
 
 /** maximum number of buffer page info we would cache. */
 #define MAX_BUF_INFO_CACHED		10000
@@ -129,6 +130,14 @@ HPUX aCC: HP ANSI C++ B3910B A.03.65) can't handle it. */
 #define SYS_SEMAPHORE_WAITS_LAST_WRITER_FILE 19
 #define SYS_SEMAPHORE_WAITS_LAST_WRITER_LINE 20
 #define SYS_SEMAPHORE_WAITS_OS_WAIT_COUNT 21
+
+/** Fields on INFORMATION_SCHEMA.SYS_TABLE_OPTIONS table */
+#define SYS_TABLE_OPTIONS_TABLE_ID	0
+#define SYS_TABLE_OPTIONS_PAGE_COMPRESSED 1
+#define SYS_TABLE_OPTIONS_PAGE_COMPRESSION_LEVEL 2
+#define SYS_TABLE_OPTIONS_ATOMIC_WRITES 3
+#define SYS_TABLE_OPTIONS_ENCRYPTED 4
+#define SYS_TABLE_OPTIONS_ENCRYPTION_KEY_ID 5
 
 /*******************************************************************//**
 Auxiliary function to store ulint value in MYSQL_TYPE_LONGLONG field.

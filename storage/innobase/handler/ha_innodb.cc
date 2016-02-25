@@ -4,7 +4,7 @@ Copyright (c) 2000, 2015, Oracle and/or its affiliates. All Rights Reserved.
 Copyright (c) 2008, 2009 Google Inc.
 Copyright (c) 2009, Percona Inc.
 Copyright (c) 2012, Facebook Inc.
-Copyright (c) 2013, 2015, MariaDB Corporation.
+Copyright (c) 2013, 2016, MariaDB Corporation.
 
 Portions of this file contain modifications contributed and copyrighted by
 Google, Inc. Those modifications are gratefully acknowledged and are described
@@ -87,6 +87,7 @@ this program; if not, write to the Free Software Foundation, Inc.,
 #include "dict0boot.h"
 #include "dict0stats.h"
 #include "dict0stats_bg.h"
+#include "dict0tableoptions.h"
 #include "ha_prototypes.h"
 #include "ut0mem.h"
 #include "ut0timer.h"
@@ -5459,6 +5460,43 @@ ha_innobase::innobase_initialize_autoinc()
 }
 
 /*****************************************************************//**
+Set up the table options structure based on frm. */
+UNIV_INTERN
+void
+ha_innobase::set_table_options(
+/*===========================*/
+	THD*		thd,		/*!< in: thd */
+	TABLE*		table,		/*!< in: table */
+	dict_tableoptions_t* options)	/*!< in: table options */
+{
+	ha_table_option_struct* moptions = table->s->option_struct;
+
+	options->page_compressed = moptions->page_compressed;
+	options->page_compression_level = moptions->page_compression_level;
+	options->atomic_writes = (atomic_writes_t)moptions->atomic_writes;
+	options->encryption = (fil_encryption_t)moptions->encryption;
+	options->encryption_key_id = moptions->encryption_key_id;
+
+	if (options->encryption_key_id == 0) {
+		options->encryption_key_id = THDVAR(thd, default_encryption_key_id);
+	}
+
+	if (options->page_compression_level == 0) {
+		options->page_compression_level = page_zip_level;
+	}
+
+	/* Table options should be stored if they are not same as
+	defaults */
+	if (moptions->page_compressed ||
+	    (options->atomic_writes == ATOMIC_WRITES_ON ||
+	     options->atomic_writes == ATOMIC_WRITES_OFF) ||
+	    (options->encryption == FIL_SPACE_ENCRYPTION_OFF ||
+	     options->encryption == FIL_SPACE_ENCRYPTION_ON)) {
+		options->need_stored = true;
+	}
+}
+
+/*****************************************************************//**
 Creates and opens a handle to a table which already exists in an InnoDB
 database.
 @return	1 if error, 0 if success */
@@ -5477,6 +5515,7 @@ ha_innobase::open(
 	ibool			par_case_name_set = FALSE;
 	char			par_case_name[FN_REFLEN];
 	dict_err_ignore_t	ignore_err = DICT_ERR_IGNORE_NONE;
+	dict_tableoptions_t	table_options;
 
 	DBUG_ENTER("ha_innobase::open");
 
@@ -5484,6 +5523,8 @@ ha_innobase::open(
 	UT_NOT_USED(test_if_locked);
 
 	thd = ha_thd();
+
+	set_table_options(thd, table, &table_options);
 
 	/* Under some cases MySQL seems to call this function while
 	holding btr_search_latch. This breaks the latching order as
@@ -5521,7 +5562,7 @@ ha_innobase::open(
 	}
 
 	/* Get pointer to a table object in InnoDB dictionary cache */
-	ib_table = dict_table_open_on_name(norm_name, FALSE, TRUE, ignore_err);
+	ib_table = dict_table_open_on_name(norm_name, FALSE, TRUE, ignore_err, &table_options);
 
 	if (ib_table
 	    && ((!DICT_TF2_FLAG_IS_SET(ib_table, DICT_TF2_FTS_HAS_DOC_ID)
@@ -5587,7 +5628,7 @@ ha_innobase::open(
 
 				ib_table = dict_table_open_on_name(
 					par_case_name, FALSE, TRUE,
-					ignore_err);
+					ignore_err, &table_options);
 			}
 
 			if (ib_table) {
@@ -10435,8 +10476,7 @@ create_table_def(
 	const char*	remote_path,	/*!< in: Remote path or zero length-string */
 	ulint		flags,		/*!< in: table flags */
 	ulint		flags2,		/*!< in: table flags2 */
-	fil_encryption_t mode,		/*!< in: encryption mode */
-	ulint		key_id)		/*!< in: encryption key_id */
+	dict_tableoptions_t* table_options) /*!< in: table options */
 {
 	THD*		thd = trx->mysql_thd;
 	dict_table_t*	table;
@@ -10626,7 +10666,10 @@ err_col:
 		fts_add_doc_id_column(table, heap);
 	}
 
-	err = row_create_table_for_mysql(table, trx, false, mode, key_id);
+	/* Copy table options to table */
+	memcpy(table->table_options, table_options, sizeof(dict_tableoptions_t));
+
+	err = row_create_table_for_mysql(table, trx, false);
 
 	mem_heap_free(heap);
 
@@ -11213,15 +11256,10 @@ innobase_table_flags(
 	enum row_type	row_format;
 	rec_format_t	innodb_row_format = REC_FORMAT_COMPACT;
 	bool		use_data_dir;
-	ha_table_option_struct *options= form->s->option_struct;
 
 	/* Cache the value of innodb_file_format, in case it is
 	modified by another thread while the table is being created. */
 	const ulint	file_format_allowed = srv_file_format;
-
-	/* Cache the value of innobase_compression_level, in case it is
-	modified by another thread while the table is being created. */
-	const ulint     default_compression_level = page_zip_level;
 
 	*flags = 0;
 	*flags2 = 0;
@@ -11431,11 +11469,7 @@ index_bad:
 	dict_tf_set(flags,
 		    innodb_row_format,
 		    zip_ssize,
-		    use_data_dir,
-		    options->page_compressed,
-		    options->page_compression_level == 0 ?
-		        default_compression_level : options->page_compression_level,
-		    options->atomic_writes);
+		    use_data_dir);
 
 	if (create_info->options & HA_LEX_CREATE_TMP_TABLE) {
 		*flags2 |= DICT_TF2_TEMPORARY;
@@ -11467,7 +11501,8 @@ ha_innobase::check_table_options(
 					created table, contains also the
 					create statement string */
 	const bool	use_tablespace, /*!< in: use file par table */
-	const ulint     file_format)
+	const ulint     file_format,	/*!< in: table row format */
+	dict_tableoptions_t* table_options) /*!< out: used table options */
 {
 	enum row_type	row_format = table->s->row_type;
 	ha_table_option_struct *options= table->s->option_struct;
@@ -11537,6 +11572,8 @@ ha_innobase::check_table_options(
 				" key_block_size");
 			return "PAGE_COMPRESSED";
 		}
+
+		table_options->need_stored = true;
 	}
 
 	/* Check page compression level requirements, some of them are
@@ -11560,6 +11597,10 @@ ha_innobase::check_table_options(
 				options->page_compression_level);
 			return "PAGE_COMPRESSION_LEVEL";
 		}
+
+		table_options->need_stored = true;
+	} else if (options->page_compressed) {
+		options->page_compression_level = page_zip_level;
 	}
 
 	/* If encryption is set up make sure that used key_id is found */
@@ -11585,7 +11626,10 @@ ha_innobase::check_table_options(
 			"InnoDB: Ignored ENCRYPTION_KEY_ID %u when encryption is disabled",
 			(uint)options->encryption_key_id
 		);
+
 		options->encryption_key_id = FIL_DEFAULT_ENCRYPTION_KEY;
+		table_options->encryption_key_id =  FIL_DEFAULT_ENCRYPTION_KEY;
+		table_options->need_stored = true;
 	}
 
 	/* If default encryption is used make sure that used kay is found
@@ -11603,6 +11647,10 @@ ha_innobase::check_table_options(
 			return "ENCRYPTION_KEY_ID";
 
 		}
+
+		table_options->need_stored = true;
+
+		table_options->need_stored = true;
 	}
 
 	/* Check atomic writes requirements */
@@ -11616,7 +11664,15 @@ ha_innobase::check_table_options(
 				" innodb_file_per_table.");
 			return "ATOMIC_WRITES";
 		}
+
+		table_options->need_stored = true;
 	}
+
+	table_options->page_compressed = options->page_compressed;
+	table_options->page_compression_level = options->page_compression_level;
+	table_options->atomic_writes = awrites;
+	table_options->encryption = encrypt;
+	table_options->encryption_key_id = options->encryption_key_id;
 
 	return 0;
 }
@@ -11659,13 +11715,10 @@ ha_innobase::create(
 	ulint		flags;
 	ulint		flags2;
 	dict_table_t*	innobase_table = NULL;
+	dict_tableoptions_t table_options;
 
 	const char*	stmt;
 	size_t		stmt_len;
-	/* Cache table options */
-	ha_table_option_struct *options= form->s->option_struct;
-	fil_encryption_t encrypt = (fil_encryption_t)options->encryption;
-	uint		key_id = (uint)options->encryption_key_id;
 
 	DBUG_ENTER("ha_innobase::create");
 
@@ -11680,9 +11733,11 @@ ha_innobase::create(
 
 	/* Create the table definition in InnoDB */
 
+	memset(&table_options, 0, sizeof(dict_tableoptions_t));
+
 	/* Validate table options not handled by the SQL-parser */
 	if(check_table_options(thd, form, create_info, use_tablespace,
-			       file_format)) {
+				file_format, &table_options)) {
 		DBUG_RETURN(HA_WRONG_CREATE_OPTION);
 	}
 
@@ -11758,7 +11813,8 @@ ha_innobase::create(
 	row_mysql_lock_data_dictionary(trx);
 
 	error = create_table_def(trx, form, norm_name, temp_path,
-			remote_path, flags, flags2, encrypt, key_id);
+			remote_path, flags, flags2, &table_options);
+
 	if (error) {
 		goto cleanup;
 	}
@@ -11792,7 +11848,7 @@ ha_innobase::create(
 		enum fts_doc_id_index_enum	ret;
 
 		innobase_table = dict_table_open_on_name(
-			norm_name, TRUE, FALSE, DICT_ERR_IGNORE_NONE);
+			norm_name, TRUE, FALSE, DICT_ERR_IGNORE_NONE, NULL);
 
 		ut_a(innobase_table);
 
@@ -11914,7 +11970,7 @@ ha_innobase::create(
 	log_buffer_flush_to_disk();
 
 	innobase_table = dict_table_open_on_name(
-		norm_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE);
+		norm_name, FALSE, FALSE, DICT_ERR_IGNORE_NONE, NULL);
 
 	DBUG_ASSERT(innobase_table != 0);
 
@@ -12270,22 +12326,26 @@ ha_innobase::defragment_table(
 	bool		async)		/*!< in: whether to wait until finish */
 {
 	char		norm_name[FN_REFLEN];
-	dict_table_t*	table = NULL;
+	dict_table_t*	itable = NULL;
 	dict_index_t*	index = NULL;
 	ibool		one_index = (index_name != 0);
 	int		ret = 0;
 	dberr_t		err = DB_SUCCESS;
+	dict_tableoptions_t options;
+	THD*			thd;
 
 	if (!srv_defragment) {
 		return ER_FEATURE_DISABLED;
 	}
 
 	normalize_table_name(norm_name, name);
+	thd = ha_thd();
+	set_table_options(thd, table, &options);
 
-	table = dict_table_open_on_name(norm_name, FALSE,
-		FALSE, DICT_ERR_IGNORE_NONE);
+	itable = dict_table_open_on_name(norm_name, FALSE,
+		FALSE, DICT_ERR_IGNORE_NONE, &options);
 
-	for (index = dict_table_get_first_index(table); index;
+	for (index = dict_table_get_first_index(itable); index;
 	     index = dict_table_get_next_index(index)) {
 
 		if (one_index && strcasecmp(index_name, index->name) != 0) {
@@ -12344,7 +12404,7 @@ ha_innobase::defragment_table(
 		}
 	}
 
-	dict_table_close(table, FALSE, FALSE);
+	dict_table_close(itable, FALSE, FALSE);
 
 	if (ret == 0 && one_index) {
 		ret = ER_NO_SUCH_INDEX;
@@ -16620,7 +16680,7 @@ innodb_internal_table_validate(
 	}
 
 	user_table = dict_table_open_on_name(
-		table_name, FALSE, TRUE, DICT_ERR_IGNORE_NONE);
+		table_name, FALSE, TRUE, DICT_ERR_IGNORE_NONE, NULL);
 
 	if (user_table) {
 		if (dict_table_has_fts_index(user_table)) {
@@ -19765,7 +19825,8 @@ i_s_innodb_sys_datafiles,
 i_s_innodb_mutexes,
 i_s_innodb_sys_semaphore_waits,
 i_s_innodb_tablespaces_encryption,
-i_s_innodb_tablespaces_scrubbing
+i_s_innodb_tablespaces_scrubbing,
+i_s_innodb_sys_table_options
 maria_declare_plugin_end;
 
 /** @brief Initialize the default value of innodb_commit_concurrency.
@@ -20421,4 +20482,26 @@ ib_push_warning(
 		buf);
 	my_free(buf);
 	va_end(args);
+}
+
+/********************************************************************//**
+Helper function to get default_encryption_key_id from THD
+(trx->mysql_thd).
+@return default_encryption_key_id from THD or
+FIL_DEFAULT_ENCRYPTION_KEY */
+UNIV_INTERN
+ulint
+innobase_get_default_encryption_key_id(
+/*===================================*/
+	trx_t*		trx)	/*! in: trx */
+{
+	ulint key_id = FIL_DEFAULT_ENCRYPTION_KEY;
+
+	if (trx && trx->mysql_thd) {
+		THD *thd = (THD *)trx->mysql_thd;
+
+		key_id = THDVAR(thd, default_encryption_key_id);
+	}
+
+	return (key_id);
 }

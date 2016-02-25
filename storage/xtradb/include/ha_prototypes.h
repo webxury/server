@@ -1,6 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 2006, 2014, Oracle and/or its affiliates. All Rights Reserved.
+Copyright (c) 2015, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -655,4 +656,16 @@ ib_push_warning(
 	ulint		error,	/*!< in: error code to push as warning */
 	const char	*format,/*!< in: warning message */
 	...);
+
+/********************************************************************//**
+Helper function to get default_encryption_key_id from THD
+(trx->mysql_thd).
+@return default_encryption_key_id from THD or
+FIL_DEFAULT_ENCRYPTION_KEY */
+UNIV_INTERN
+ulint
+innobase_get_default_encryption_key_id(
+/*===================================*/
+	trx_t*		trx);	/*! in: trx */
+
 #endif /* HA_INNODB_PROTOTYPES_H */

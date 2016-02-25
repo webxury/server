@@ -2,7 +2,7 @@
 
 Copyright (c) 1997, 2015, Oracle and/or its affiliates. All Rights Reserved.
 Copyright (c) 2012, Facebook Inc.
-Copyright (c) 2013, 2015, MariaDB Corporation. All Rights Reserved.
+Copyright (c) 2013, 2016, MariaDB Corporation. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -1323,6 +1323,9 @@ recv_parse_or_apply_log_rec_body(
 		break;
 	case MLOG_FILE_WRITE_CRYPT_DATA:
 		ptr = fil_parse_write_crypt_data(ptr, end_ptr, block);
+		break;
+	case MLOG_FILE_WRITE_FSP_FLAGS:
+		ptr = fil_parse_write_fsp_flags(ptr, end_ptr, block);
 		break;
 	default:
 		ptr = NULL;

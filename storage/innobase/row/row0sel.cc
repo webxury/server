@@ -5306,7 +5306,7 @@ row_search_check_if_query_cache_permitted(
 	}
 
 	table = dict_table_open_on_name(norm_name, FALSE, FALSE,
-					DICT_ERR_IGNORE_NONE);
+					DICT_ERR_IGNORE_NONE, NULL);
 
 	if (table == NULL) {
 

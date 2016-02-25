@@ -3,7 +3,7 @@
 Copyright (c) 1996, 2015, Oracle and/or its affiliates. All rights reserved.
 Copyright (c) 2008, Google Inc.
 Copyright (c) 2009, Percona Inc.
-Copyright (c) 2013, 2015, MariaDB Corporation
+Copyright (c) 2013, 2016, MariaDB Corporation.
 
 Portions of this file contain modifications contributed and copyrighted by
 Google, Inc. Those modifications are gratefully acknowledged and are described
@@ -675,7 +675,8 @@ create_log_files(
 		logfilename, SRV_LOG_SPACE_FIRST_ID,
 		fsp_flags_set_page_size(0, UNIV_PAGE_SIZE),
 		FIL_LOG,
-		NULL /* no encryption yet */);
+		NULL /* no encryption yet */,
+		NULL);
 	ut_a(fil_validate());
 
 	logfile0 = fil_node_create(
@@ -1158,9 +1159,12 @@ check_first_page:
 		ut_a(ret);
 
 		if (i == 0) {
+			dict_tableoptions_t options;
+			memset(&options, 0, sizeof(dict_tableoptions_t));
+			options.encryption_key_id = FIL_DEFAULT_ENCRYPTION_KEY;
 			flags = fsp_flags_set_page_size(0, UNIV_PAGE_SIZE);
 			fil_space_create(name, 0, flags, FIL_TABLESPACE,
-					 crypt_data);
+				crypt_data, &options);
 			crypt_data = NULL;
 		}
 
@@ -1308,7 +1312,7 @@ srv_undo_tablespace_open(
 		/* Set the compressed page size to 0 (non-compressed) */
 		flags = fsp_flags_set_page_size(0, UNIV_PAGE_SIZE);
 		fil_space_create(name, space, flags, FIL_TABLESPACE,
-				 NULL /* no encryption */);
+			NULL /* no encryption */, NULL);
 
 		ut_a(fil_validate());
 
@@ -1585,6 +1589,7 @@ innobase_start_or_create_for_mysql(void)
 	char*		logfile0	= NULL;
 	size_t		dirnamelen;
 	bool		sys_datafiles_created = false;
+	bool		sys_table_options_created = false;
 
 	/* This should be initialized early */
 	ut_init_timer();
@@ -2293,7 +2298,8 @@ innobase_start_or_create_for_mysql(void)
 				 SRV_LOG_SPACE_FIRST_ID,
 				 fsp_flags_set_page_size(0, UNIV_PAGE_SIZE),
 				 FIL_LOG,
-				 NULL /* no encryption yet */);
+				 NULL /* no encryption yet */,
+				 NULL);
 
 		ut_a(fil_validate());
 
@@ -2315,7 +2321,7 @@ innobase_start_or_create_for_mysql(void)
 		/* Create the file space object for archived logs. Under
 		MySQL, no archiving ever done. */
 		fil_space_create("arch_log_space", SRV_LOG_SPACE_FIRST_ID + 1,
-				 0, FIL_LOG);
+			0, FIL_LOG, NULL, NULL);
 #endif /* UNIV_LOG_ARCHIVE */
 		log_group_init(0, i, srv_log_file_size * UNIV_PAGE_SIZE,
 			       SRV_LOG_SPACE_FIRST_ID,
@@ -2537,7 +2543,16 @@ files_checked:
 
 			sys_datafiles_created = true;
 
-			/* This function assumes that SYS_DATAFILES exists */
+			err = dict_create_or_check_sys_table_options();
+
+			if (err != DB_SUCCESS) {
+				return(err);
+			}
+
+			sys_table_options_created = true;
+
+			/* This function assumes that SYS_DATAFILES
+			and SYS_TABLE_OPTIONS exists */
 			dict_check_tablespaces_and_store_max_id(dict_check);
 		}
 
@@ -2742,6 +2757,16 @@ files_checked:
 	have not done that already on crash recovery. */
 	if (sys_datafiles_created == false) {
 		err = dict_create_or_check_sys_tablespace();
+		if (err != DB_SUCCESS) {
+			return(err);
+		}
+	}
+
+	/* Create the SYS_TABLE_OPTIONS system table if we
+	have not done that already on crash recovery. */
+	if (sys_table_options_created == false) {
+		err = dict_create_or_check_sys_table_options();
+
 		if (err != DB_SUCCESS) {
 			return(err);
 		}

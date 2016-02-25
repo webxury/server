@@ -1,6 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1996, 2013, Oracle and/or its affiliates. All Rights Reserved.
+Copyright (c) 2015, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -44,6 +45,7 @@ enum dict_system_id_t {
 	SYS_FOREIGN_COLS,
 	SYS_TABLESPACES,
 	SYS_DATAFILES,
+	SYS_TABLE_OPTIONS,
 
 	/* This must be last item. Defines the number of system tables. */
 	SYS_NUM_SYSTEM_TABLES
@@ -201,9 +203,11 @@ dict_load_table(
 	const char*	name,	/*!< in: table name in the
 				databasename/tablename format */
 	ibool		cached,	/*!< in: TRUE=add to cache, FALSE=do not */
-	dict_err_ignore_t ignore_err);
+	dict_err_ignore_t ignore_err,
 				/*!< in: error to be ignored when loading
 				table and its indexes' definition */
+	dict_tableoptions_t* options);
+				/*!< in: table options */
 /***********************************************************************//**
 Loads a table object based on the table id.
 @return	table; NULL if table does not exist */

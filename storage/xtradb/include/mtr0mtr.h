@@ -2,6 +2,7 @@
 
 Copyright (c) 1995, 2013, Oracle and/or its affiliates. All Rights Reserved.
 Copyright (c) 2012, Facebook Inc.
+Copyright (c) 2015, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -193,9 +194,12 @@ For 1 - 8 bytes, the flag value must give the length also! @{ */
 #define MLOG_FILE_WRITE_CRYPT_DATA ((byte)100)	/*!< log record for
 						writing/updating crypt data of
 						a tablespace */
-
+#define MLOG_FILE_WRITE_FSP_FLAGS ((byte)101)	/*!< log record for
+						writing/updating flags
+						a tablespace */
 #define EXTRA_CHECK_MLOG_NUMBER(x) \
-  ((x) == MLOG_FILE_WRITE_CRYPT_DATA)
+   ((x) == MLOG_FILE_WRITE_CRYPT_DATA || \
+    (x) == MLOG_FILE_WRITE_FSP_FLAGS)
 
 /* @} */
 

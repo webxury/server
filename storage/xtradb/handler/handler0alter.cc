@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 2005, 2015, Oracle and/or its affiliates. All Rights Reserved.
-Copyright (c) 2013, 2015, MariaDB Corporation. All Rights Reserved.
+Copyright (c) 2013, 2016, MariaDB Corporation. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -2828,7 +2828,6 @@ prepare_inplace_alter_table_dict(
 	to rebuild the table with a temporary name. */
 
 	if (new_clustered) {
-		fil_space_crypt_t* crypt_data;
 		const char*	new_table_name
 			= dict_mem_create_temporary_tablename(
 				ctx->heap,
@@ -2836,15 +2835,6 @@ prepare_inplace_alter_table_dict(
 				ctx->new_table->id);
 		ulint		n_cols;
 		dtuple_t*	add_cols;
-		ulint		key_id = FIL_DEFAULT_ENCRYPTION_KEY;
-		fil_encryption_t mode = FIL_SPACE_ENCRYPTION_DEFAULT;
-
-		crypt_data = fil_space_get_crypt_data(ctx->prebuilt->table->space);
-
-		if (crypt_data) {
-			key_id = crypt_data->key_id;
-			mode = crypt_data->encryption;
-		}
 
 		if (innobase_check_foreigns(
 			    ha_alter_info, altered_table, old_table,
@@ -2976,7 +2966,7 @@ prepare_inplace_alter_table_dict(
 		}
 
 		error = row_create_table_for_mysql(
-			ctx->new_table, ctx->trx, false, mode, key_id);
+			ctx->new_table, ctx->trx, false);
 
 		switch (error) {
 			dict_table_t*	temp_table;
@@ -2989,7 +2979,7 @@ prepare_inplace_alter_table_dict(
 			ut_ad(mutex_own(&dict_sys->mutex));
 			temp_table = dict_table_open_on_name(
 				ctx->new_table->name, TRUE, FALSE,
-				DICT_ERR_IGNORE_NONE);
+				DICT_ERR_IGNORE_NONE, NULL);
 			ut_a(ctx->new_table == temp_table);
 			/* n_ref_count must be 1, because purge cannot
 			be executing on this very table as we are
@@ -3505,7 +3495,8 @@ ha_innobase::prepare_inplace_alter_table(
 				user_thd, altered_table,
 				ha_alter_info->create_info,
 				prebuilt->table->space != 0,
-				srv_file_format)) {
+				srv_file_format,
+				prebuilt->table->table_options)) {
 			my_error(ER_ILLEGAL_HA_CREATE_OPTION, MYF(0),
 				 table_type(), invalid_tbopt);
 			goto err_exit_no_heap;

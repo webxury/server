@@ -1489,7 +1489,8 @@ fts_drop_table(
 	table = dict_table_open_on_name(
 		table_name, TRUE, FALSE,
 		static_cast<dict_err_ignore_t>(
-                        DICT_ERR_IGNORE_INDEX_ROOT | DICT_ERR_IGNORE_CORRUPT));
+                        DICT_ERR_IGNORE_INDEX_ROOT | DICT_ERR_IGNORE_CORRUPT),
+		NULL);
 
 	if (table != 0) {
 
@@ -1981,7 +1982,13 @@ fts_create_one_index_table(
 	dict_mem_table_add_col(new_table, heap, "ilist", DATA_BLOB,
 			       4130048,	0);
 
-	error = row_create_table_for_mysql(new_table, trx, false, FIL_SPACE_ENCRYPTION_DEFAULT, FIL_DEFAULT_ENCRYPTION_KEY);
+	/* Get default encryption key id if set */
+	if (new_table && new_table->table_options &&
+		new_table->table_options->encryption_key_id == 0) {
+		new_table->table_options->encryption_key_id = innobase_get_default_encryption_key_id(trx);
+	}
+
+	error = row_create_table_for_mysql(new_table, trx, false);
 
 	if (error != DB_SUCCESS) {
 		trx->error_state = error;

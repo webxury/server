@@ -36,8 +36,9 @@ InnoDB Native API
 
 #include "api0api.h"
 #include "api0misc.h"
-#include "srv0start.h"
+#include "dict0tableoptions.h"
 #include "dict0dict.h"
+#include "srv0start.h"
 #include "btr0pcur.h"
 #include "row0ins.h"
 #include "row0upd.h"
@@ -270,7 +271,7 @@ ib_open_table_by_name(
 	dict_table_t*	table;
 
 	table = dict_table_open_on_name(name, FALSE, FALSE,
-					DICT_ERR_IGNORE_NONE);
+					DICT_ERR_IGNORE_NONE, NULL);
 
 	if (table != NULL && table->ibd_file_missing) {
 		table = NULL;
@@ -3723,7 +3724,7 @@ ib_table_truncate(
 	dict_mutex_enter_for_mysql();
 
 	table = dict_table_open_on_name(table_name, TRUE, FALSE,
-					DICT_ERR_IGNORE_NONE);
+					DICT_ERR_IGNORE_NONE, NULL);
 
 	if (table != NULL && dict_table_get_first_index(table)) {
 		err = ib_create_cursor_with_index_id(&ib_crsr, table, 0,

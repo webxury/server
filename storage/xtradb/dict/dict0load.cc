@@ -1,6 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1996, 2013, Oracle and/or its affiliates. All Rights Reserved.
+Copyright (c) 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -24,6 +25,13 @@ from dictionary tables
 Created 4/24/1996 Heikki Tuuri
 *******************************************************/
 
+#include "univ.i"
+#include "dict0dict.h"
+#include "fil0fil.h"
+#include "my_crypt.h"
+#include "fil0crypt.h"
+#include "dict0types.h"
+#include "dict0tableoptions.h"
 #include "dict0load.h"
 #include "mysql_version.h"
 
@@ -56,7 +64,8 @@ static const char* SYSTEM_TABLE_NAME[] = {
 	"SYS_FOREIGN",
 	"SYS_FOREIGN_COLS",
 	"SYS_TABLESPACES",
-	"SYS_DATAFILES"
+	"SYS_DATAFILES",
+	"SYS_TABLE_OPTIONS"
 };
 
 /* If this flag is TRUE, then we will load the cluster index's (and tables')
@@ -1083,6 +1092,11 @@ loop:
 			discarded = !!(flags2 & DICT_TF2_DISCARDED);
 		}
 
+		field = rec_get_nth_field_old(
+			rec, DICT_FLD__SYS_TABLES__ID, &len);
+		table_id_t table_id =  static_cast<table_id_t>(
+			mach_read_from_8(field));
+
 		if (space_id == 0) {
 			/* The system tablespace always exists. */
 			ut_ad(!discarded);
@@ -1148,6 +1162,7 @@ loop:
 
 			/* Use the remote filepath if known. */
 			char*	filepath = NULL;
+
 			if (DICT_TF_HAS_DATA_DIR(flags)) {
 				filepath = dict_get_first_path(
 					space_id, name);
@@ -1158,6 +1173,10 @@ loop:
 			since if it's off we should decrypt a potentially
 			already encrypted table */
 			bool read_page_0 = true;
+			dict_tableoptions_t options;
+
+			memset(&options, 0, sizeof(dict_tableoptions_t));
+			dict_get_table_options(table_id, &options, true);
 
 			/* We set the 2nd param (fix_dict = true)
 			here because we already have an x-lock on
@@ -1168,7 +1187,7 @@ loop:
 			dberr_t	err = fil_open_single_table_tablespace(
 				read_page_0, srv_read_only_mode ? false : true,
 				space_id, dict_tf_to_fsp_flags(flags),
-				name, filepath, NULL);
+				name, filepath, NULL, &options);
 
 			if (err != DB_SUCCESS) {
 				ib_logf(IB_LOG_LEVEL_ERROR,
@@ -2281,9 +2300,11 @@ dict_load_table(
 	const char*	name,	/*!< in: table name in the
 				databasename/tablename format */
 	ibool		cached,	/*!< in: TRUE=add to cache, FALSE=do not */
-	dict_err_ignore_t ignore_err)
+	dict_err_ignore_t ignore_err,
 				/*!< in: error to be ignored when loading
 				table and its indexes' definition */
+	dict_tableoptions_t* options)
+				/*!< in: table options */
 {
 	dberr_t		err;
 	dict_table_t*	table;
@@ -2366,6 +2387,11 @@ err_exit:
 	btr_pcur_close(&pcur);
 	mtr_commit(&mtr);
 
+	if (table && options) {
+		ut_ad(table->table_options);
+		memcpy(table->table_options, options, sizeof(dict_tableoptions_t));
+	}
+
 	if (table->space == 0) {
 		/* The system tablespace is always available. */
 	} else if (table->flags2 & DICT_TF2_DISCARDED) {
@@ -2413,7 +2439,7 @@ err_exit:
 			err = fil_open_single_table_tablespace(
 				true, false, table->space,
 				dict_tf_to_fsp_flags(table->flags),
-				name, filepath, table);
+				name, filepath, table, table->table_options);
 
 			if (err != DB_SUCCESS) {
 				/* We failed to find a sensible
@@ -2635,7 +2661,7 @@ check_rec:
 				table = dict_load_table(
 					mem_heap_strdupl(
 						heap, (char*) field, len),
-					TRUE, ignore_err);
+					TRUE, ignore_err, NULL);
 			}
 		}
 	}

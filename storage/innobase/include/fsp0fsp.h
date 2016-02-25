@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1995, 2012, Oracle and/or its affiliates. All Rights Reserved.
-Copyright (c) 2013, SkySQL Ab. All Rights Reserved.
+Copyright (c) 2013, 2016, MariaDB Corporation. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -55,22 +55,13 @@ to the two Barracuda row formats COMPRESSED and DYNAMIC. */
 /** Width of the DATA_DIR flag.  This flag indicates that the tablespace
 is found in a remote location, not the default data directory. */
 #define FSP_FLAGS_WIDTH_DATA_DIR	1
-/** Number of flag bits used to indicate the page compression and compression level */
-#define FSP_FLAGS_WIDTH_PAGE_COMPRESSION  1
-#define FSP_FLAGS_WIDTH_PAGE_COMPRESSION_LEVEL 4
-
-/** Number of flag bits used to indicate atomic writes for this tablespace */
-#define FSP_FLAGS_WIDTH_ATOMIC_WRITES  2
 
 /** Width of all the currently known tablespace flags */
 #define FSP_FLAGS_WIDTH		(FSP_FLAGS_WIDTH_POST_ANTELOPE	\
 				+ FSP_FLAGS_WIDTH_ZIP_SSIZE	\
 				+ FSP_FLAGS_WIDTH_ATOMIC_BLOBS	\
 				+ FSP_FLAGS_WIDTH_PAGE_SSIZE	\
-				+ FSP_FLAGS_WIDTH_DATA_DIR      \
-				+ FSP_FLAGS_WIDTH_PAGE_COMPRESSION \
-				+ FSP_FLAGS_WIDTH_PAGE_COMPRESSION_LEVEL \
-				+ FSP_FLAGS_WIDTH_ATOMIC_WRITES )
+				+ FSP_FLAGS_WIDTH_DATA_DIR )
 
 /** A mask of all the known/used bits in tablespace flags */
 #define FSP_FLAGS_MASK		(~(~0 << FSP_FLAGS_WIDTH))
@@ -83,20 +74,9 @@ is found in a remote location, not the default data directory. */
 /** Zero relative shift position of the ATOMIC_BLOBS field */
 #define FSP_FLAGS_POS_ATOMIC_BLOBS	(FSP_FLAGS_POS_ZIP_SSIZE	\
 					+ FSP_FLAGS_WIDTH_ZIP_SSIZE)
-/** Note that these need to be before the page size to be compatible with
-dictionary */
-/** Zero relative shift position of the PAGE_COMPRESSION field */
-#define FSP_FLAGS_POS_PAGE_COMPRESSION	(FSP_FLAGS_POS_ATOMIC_BLOBS	\
-					+ FSP_FLAGS_WIDTH_ATOMIC_BLOBS)
-/** Zero relative shift position of the PAGE_COMPRESSION_LEVEL field */
-#define FSP_FLAGS_POS_PAGE_COMPRESSION_LEVEL	(FSP_FLAGS_POS_PAGE_COMPRESSION	\
-					+ FSP_FLAGS_WIDTH_PAGE_COMPRESSION)
-/** Zero relative shift position of the ATOMIC_WRITES field */
-#define FSP_FLAGS_POS_ATOMIC_WRITES	(FSP_FLAGS_POS_PAGE_COMPRESSION_LEVEL	\
-					+ FSP_FLAGS_WIDTH_PAGE_COMPRESSION_LEVEL)
 /** Zero relative shift position of the PAGE_SSIZE field */
-#define FSP_FLAGS_POS_PAGE_SSIZE	(FSP_FLAGS_POS_ATOMIC_WRITES	\
-					+ FSP_FLAGS_WIDTH_ATOMIC_WRITES)
+#define FSP_FLAGS_POS_PAGE_SSIZE	(FSP_FLAGS_POS_ATOMIC_BLOBS	\
+					+ FSP_FLAGS_WIDTH_ATOMIC_BLOBS)
 /** Zero relative shift position of the start of the UNUSED bits */
 #define FSP_FLAGS_POS_DATA_DIR		(FSP_FLAGS_POS_PAGE_SSIZE	\
 					+ FSP_FLAGS_WIDTH_PAGE_SSIZE)
@@ -124,18 +104,6 @@ dictionary */
 #define FSP_FLAGS_MASK_DATA_DIR					\
 		((~(~0 << FSP_FLAGS_WIDTH_DATA_DIR))		\
 		<< FSP_FLAGS_POS_DATA_DIR)
-/** Bit mask of the PAGE_COMPRESSION field */
-#define FSP_FLAGS_MASK_PAGE_COMPRESSION			\
-		((~(~0 << FSP_FLAGS_WIDTH_PAGE_COMPRESSION))	\
-		<< FSP_FLAGS_POS_PAGE_COMPRESSION)
-/** Bit mask of the PAGE_COMPRESSION_LEVEL field */
-#define FSP_FLAGS_MASK_PAGE_COMPRESSION_LEVEL		\
-		((~(~0 << FSP_FLAGS_WIDTH_PAGE_COMPRESSION_LEVEL))	\
-		<< FSP_FLAGS_POS_PAGE_COMPRESSION_LEVEL)
-/** Bit mask of the ATOMIC_WRITES field */
-#define FSP_FLAGS_MASK_ATOMIC_WRITES		\
-		((~(~0 << FSP_FLAGS_WIDTH_ATOMIC_WRITES))	\
-		<< FSP_FLAGS_POS_ATOMIC_WRITES)
 /** Return the value of the POST_ANTELOPE field */
 #define FSP_FLAGS_GET_POST_ANTELOPE(flags)			\
 		((flags & FSP_FLAGS_MASK_POST_ANTELOPE)		\
@@ -160,39 +128,21 @@ dictionary */
 #define FSP_FLAGS_GET_UNUSED(flags)				\
 		(flags >> FSP_FLAGS_POS_UNUSED)
 
-/** Return the value of the PAGE_COMPRESSION field */
-#define FSP_FLAGS_GET_PAGE_COMPRESSION(flags)		\
-		((flags & FSP_FLAGS_MASK_PAGE_COMPRESSION)	\
-		>> FSP_FLAGS_POS_PAGE_COMPRESSION)
-/** Return the value of the PAGE_COMPRESSION_LEVEL field */
-#define FSP_FLAGS_GET_PAGE_COMPRESSION_LEVEL(flags)		\
-		((flags & FSP_FLAGS_MASK_PAGE_COMPRESSION_LEVEL) \
-		>> FSP_FLAGS_POS_PAGE_COMPRESSION_LEVEL)
-/** Return the value of the ATOMIC_WRITES field */
-#define FSP_FLAGS_GET_ATOMIC_WRITES(flags)		\
-		((flags & FSP_FLAGS_MASK_ATOMIC_WRITES) \
-		>> FSP_FLAGS_POS_ATOMIC_WRITES)
-
 /** Set a PAGE_SSIZE into the correct bits in a given
 tablespace flags. */
 #define FSP_FLAGS_SET_PAGE_SSIZE(flags, ssize)			\
 		(flags | (ssize << FSP_FLAGS_POS_PAGE_SSIZE))
 
-/** Set a PAGE_COMPRESSION into the correct bits in a given
-tablespace flags. */
-#define FSP_FLAGS_SET_PAGE_COMPRESSION(flags, compression)	\
-		(flags | (compression << FSP_FLAGS_POS_PAGE_COMPRESSION))
-
-/** Set a PAGE_COMPRESSION_LEVEL into the correct bits in a given
-tablespace flags. */
-#define FSP_FLAGS_SET_PAGE_COMPRESSION_LEVEL(flags, level)	\
-		(flags | (level << FSP_FLAGS_POS_PAGE_COMPRESSION_LEVEL))
-
-/** Set a ATOMIC_WRITES into the correct bits in a given
-tablespace flags. */
-#define FSP_FLAGS_SET_ATOMIC_WRITES(flags, atomics)	\
-		(flags | (atomics << FSP_FLAGS_POS_ATOMIC_WRITES))
-
+#define FSP_FLAGS_POS_PAGE_SSIZE_MARIADB	(FSP_FLAGS_POS_ATOMIC_BLOBS	\
+					+ 1 + 1 + 4 + 2)
+/** Bit mask of the PAGE_SSIZE field */
+#define FSP_FLAGS_MASK_PAGE_SSIZE_MARIADB			\
+		((~(~0 << FSP_FLAGS_WIDTH_PAGE_SSIZE))		\
+		<< FSP_FLAGS_POS_PAGE_SSIZE_MARIADB)
+/** Return the value of the PAGE_SSIZE field */
+#define FSP_FLAGS_GET_PAGE_SSIZE_MARIADB(flags)			\
+		((flags & FSP_FLAGS_MASK_PAGE_SSIZE_MARIADB)	\
+		>> FSP_FLAGS_POS_PAGE_SSIZE_MARIADB)
 /* @} */
 
 /* @defgroup Tablespace Header Constants (moved from fsp0fsp.c) @{ */

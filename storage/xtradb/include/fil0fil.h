@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1995, 2014, Oracle and/or its affiliates. All Rights Reserved.
-Copyright (c) 2013, 2015, MariaDB Corporation.
+Copyright (c) 2013, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -40,6 +40,7 @@ Created 10/25/1995 Heikki Tuuri
 #include "log0log.h"
 #endif /* !UNIV_HOTBACKUP */
 #include "trx0types.h"
+#include "my_crypt.h"
 
 #include <list>
 
@@ -181,6 +182,8 @@ extern fil_addr_t	fil_addr_null;
 #define FIL_TABLESPACE		501	/*!< tablespace */
 #define FIL_LOG			502	/*!< redo log */
 /* @} */
+
+#include "fil0crypt.h"
 
 /* structure containing encryption specification */
 typedef struct fil_space_crypt_struct fil_space_crypt_t;
@@ -329,6 +332,7 @@ struct fil_space_t {
         fil_space_crypt_t* crypt_data;
 	ulint		file_block_size;/*!< file system block size */
 	ulint		magic_n;/*!< FIL_SPACE_MAGIC_N */
+        void*		table_options;
 };
 
 /** Value of fil_space_t::magic_n */
@@ -466,12 +470,13 @@ UNIV_INTERN
 ibool
 fil_space_create(
 /*=============*/
-	const char*	name,	/*!< in: space name */
-	ulint		id,	/*!< in: space id */
-	ulint		zip_size,/*!< in: compressed page size, or
-				0 for uncompressed tablespaces */
-	ulint		purpose, /*!< in: FIL_TABLESPACE, or FIL_LOG if log */
-	fil_space_crypt_t* crypt_data); /*!< in: crypt data */
+	const char*	name,		/*!< in: space name */
+	ulint		id,		/*!< in: space id */
+	ulint		zip_size,	/*!< in: compressed page size, or
+					0 for uncompressed tablespaces */
+	ulint		purpose,	/*!< in: FIL_TABLESPACE, or FIL_LOG if log */
+	fil_space_crypt_t* crypt_data,	/*!< in: crypt data */
+	const void*	options);	/*!< in: table options */
 
 /*******************************************************************//**
 Assigns a new space id for a new single-table tablespace. This works simply by
@@ -794,9 +799,8 @@ fil_create_new_single_table_tablespace(
 	ulint		size,		/*!< in: the initial size of the
 					tablespace file in pages,
 					must be >= FIL_IBD_FILE_INITIAL_SIZE */
-	fil_encryption_t mode,	/*!< in: encryption mode */
-	ulint		key_id)	/*!< in: encryption key_id */
-	__attribute__((nonnull, warn_unused_result));
+	const dict_table_t* table)	/*!< in: table */
+	__attribute__((warn_unused_result));
 #ifndef UNIV_HOTBACKUP
 /********************************************************************//**
 Tries to open a single-table tablespace and optionally checks the space id is
@@ -830,7 +834,8 @@ fil_open_single_table_tablespace(
 	const char*	tablename,	/*!< in: table name in the
 					databasename/tablename format */
 	const char*	filepath,	/*!< in: tablespace filepath */
-	dict_table_t*	table)		/*!< in: table */
+	dict_table_t*	table,		/*!< in: table or NULL */
+	void*		options)/*!< in: table options*/
 	__attribute__((nonnull(5), warn_unused_result));
 
 #endif /* !UNIV_HOTBACKUP */
@@ -1364,6 +1369,17 @@ const char*
 fil_get_page_type_name(
 /*===================*/
 	ulint	page_type);	/*!< in: FIL_PAGE_TYPE */
+
+/******************************************************************
+Parse a MLOG_FILE_WRITE_FSP_FLAGS log entry
+@return position on log buffer */
+UNIV_INTERN
+byte*
+fil_parse_write_fsp_flags(
+/*======================*/
+	byte*		ptr,	/*!< in: Log entry start */
+	byte*		end_ptr,/*!< in: Log entry end */
+	buf_block_t*	block);	/*!< in: buffer block */
 
 #ifndef UNIV_NONINL
 #include "fil0fil.ic"
