@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (C) 2012, 2014 Facebook, Inc. All Rights Reserved.
-Copyright (C) 2014, 2015, MariaDB Corporation. All Rights Reserved.
+Copyright (C) 2014, 2016, MariaDB Corporation. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -150,8 +150,8 @@ Initialize defragmentation. */
 void
 btr_defragment_init()
 {
-	srv_defragment_interval = ut_microseconds_to_timer(
-		1000000.0 / srv_defragment_frequency);
+	srv_defragment_interval = (ulonglong)ut_microseconds_to_timer(
+		(ulonglong)(1000000.0 / srv_defragment_frequency));
 	mutex_create(btr_defragment_mutex_key, &btr_defragment_mutex,
 		     SYNC_ANY_LATCH);
 	os_thread_create(btr_defragment_thread, NULL, NULL);

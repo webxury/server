@@ -501,7 +501,7 @@ fil_decompress_page(
 	if (ptype == FIL_PAGE_PAGE_COMPRESSED_ENCRYPTED) {
 		compression_alg = mach_read_from_2(buf+FIL_PAGE_DATA+FIL_PAGE_COMPRESSED_SIZE);
 	} else {
-		compression_alg = mach_read_from_8(buf+FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
+		compression_alg = (ulint)mach_read_from_8(buf+FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
 	}
 
 	/* Get the actual size of compressed page */

@@ -114,8 +114,8 @@ bool
 btr_scrub_lock_dict_func(ulint space, bool lock_to_close_table,
 			 const char * file, uint line)
 {
-	uint start = time(0);
-	uint last = start;
+	time_t start = time(0);
+	time_t last = start;
 
 	while (mutex_enter_nowait_func(&(dict_sys->mutex), file, line)) {
 		/* if we lock to close a table, we wait forever
@@ -129,13 +129,13 @@ btr_scrub_lock_dict_func(ulint space, bool lock_to_close_table,
 		}
 		os_thread_sleep(250000);
 
-		uint now = time(0);
+		time_t now = time(0);
 		if (now >= last + 30) {
 			fprintf(stderr,
 				"WARNING: %s:%u waited %u seconds for"
 				" dict_sys lock, space: %lu"
 				" lock_to_close_table: %u\n",
-				file, line, now - start, space,
+				file, line, (uint)(now - start), space,
 				lock_to_close_table);
 
 			last = now;

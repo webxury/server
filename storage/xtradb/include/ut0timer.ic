@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 2013, 2014, Facebook, Inc. All Rights Reserved.
-Copyright (c) 2014, SkySQL Ab. All Rights Reserved.
+Copyright (c) 2014, 2016, MariaDB Corporation. All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -106,7 +106,7 @@ ut_microseconds_to_timer(
 /*=====================*/
 	ulonglong	when) /*!< in: time where to calculate */
 {
-	double ret = when;
+	double ret = (double)(when);
 	ret *= (double)(ut_timer.frequency);
 	ret /= 1000000.0;
 	return (ulonglong)ret;

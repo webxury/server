@@ -465,7 +465,7 @@ fil_parse_write_crypt_data(
 	buf_block_t*	block)	/*!< in: buffer block */
 {
 	/* check that redo log entry is complete */
-	uint entry_size =
+	int entry_size =
 		4 + // size of space_id
 		2 + // size of offset
 		1 + // size of type
@@ -1759,7 +1759,7 @@ fil_crypt_get_page_throttle_func(
 	}
 
 	state->cnt_waited++;
-	state->sum_waited_us += (end - start);
+	state->sum_waited_us += (uint)(end - start);
 
 	/* average page load */
 	ulint add_sleeptime_ms = 0;
@@ -2064,7 +2064,7 @@ fil_crypt_flush_space(
 
 		if (sum_pages && end > start) {
 			state->cnt_waited += sum_pages;
-			state->sum_waited_us += (end - start);
+			state->sum_waited_us += (uint)(end - start);
 
 			/* statistics */
 			state->crypt_stat.pages_flushed += sum_pages;
@@ -2447,8 +2447,8 @@ fil_space_crypt_close_tablespace(
 		return;
 	}
 
-	uint start = time(0);
-	uint last = start;
+	time_t start = time(0);
+	time_t last = start;
 
 	mutex_enter(&crypt_data->mutex);
 	mutex_exit(&fil_crypt_threads_mutex);
@@ -2470,12 +2470,12 @@ fil_space_crypt_close_tablespace(
 		cnt = crypt_data->rotate_state.active_threads;
 		flushing = crypt_data->rotate_state.flushing;
 
-		uint now = time(0);
+		time_t now = time(0);
 
 		if (now >= last + 30) {
 			ib_logf(IB_LOG_LEVEL_WARN,
 				"Waited %u seconds to drop space: %lu.",
-				now - start, space);
+				(uint)(now - start), space);
 			last = now;
 		}
 	}

@@ -87,7 +87,7 @@ dict_table_page_compression_level(
 {
 	ut_ad(table);
 
-	return(table->table_options->page_compression_level);
+	return((ulint)table->table_options->page_compression_level);
 }
 
 /********************************************************************//**

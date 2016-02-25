@@ -1,7 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1995, 2015, Oracle and/or its affiliates
-Copyright (c) 2013, 2015, MariaDB
+Copyright (c) 2013, 2016, MariaDB
 Copyright (c) 2013, 2014, Fusion-io
 
 This program is free software; you can redistribute it and/or modify it under
@@ -2425,9 +2425,9 @@ ulint
 af_get_pct_for_dirty()
 /*==================*/
 {
-	ulint dirty_pct = buf_get_modified_ratio_pct();
+	ulint dirty_pct = (ulint)buf_get_modified_ratio_pct();
 
-	if (dirty_pct > 0 && srv_max_buf_pool_modified_pct == 0) {
+	if (dirty_pct > 0 && (ulint)srv_max_buf_pool_modified_pct == 0) {
 		return(100);
 	}
 
@@ -2463,7 +2463,7 @@ af_get_pct_for_lsn(
 {
 	lsn_t	max_async_age;
 	lsn_t	lsn_age_factor;
-	lsn_t	af_lwm = (srv_adaptive_flushing_lwm
+	lsn_t	af_lwm = (lsn_t)(srv_adaptive_flushing_lwm
 			  * log_get_capacity()) / 100;
 
 	if (age < af_lwm) {
@@ -2502,6 +2502,8 @@ af_get_pct_for_lsn(
 	default:
 		ut_error;
 	}
+
+	return (0); // silence compiler;
 }
 
 /*********************************************************************//**

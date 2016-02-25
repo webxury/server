@@ -3734,7 +3734,7 @@ fil_parse_write_fsp_flags(
 	buf_block_t*	block)	/*!< in: buffer block */
 {
 	/* check that redo log entry is complete */
-	uint entry_size = 4 + 4; // size of flags + space_id
+	int entry_size = 4 + 4; // size of flags + space_id
 
 	if (end_ptr - ptr < entry_size){
 		return NULL;
@@ -6768,7 +6768,7 @@ fil_iterate(
 					NULL,
 					size,
 					fil_space_get_page_compression_level(space_id),
-					fil_space_get_block_size(space_id, offset, size),
+					fil_space_get_block_size(space_id, (ulint)offset, size),
 					encrypted,
 					&len,
 					NULL);
