@@ -6426,7 +6426,7 @@ buf_page_decrypt_after_read(
 		}
 	}
 
-	bpage->key_version = key_version;
+	bpage->key_version = (uint)key_version;
 
 	return (TRUE);
 }

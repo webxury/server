@@ -3536,8 +3536,8 @@ fil_create_new_single_table_tablespace(
 	requested it to remain unencrypted. */
 	if (mode == FIL_SPACE_ENCRYPTION_ON || mode == FIL_SPACE_ENCRYPTION_OFF ||
 		srv_encrypt_tables) {
-		uint key_id = table ? table->table_options->encryption_key_id :
-				FIL_DEFAULT_ENCRYPTION_KEY;
+		uint key_id = (uint)(table ? table->table_options->encryption_key_id :
+			FIL_DEFAULT_ENCRYPTION_KEY);
 		crypt_data = fil_space_create_crypt_data(mode, key_id);
 	}
 
@@ -3634,7 +3634,7 @@ void
 fil_space_set_fsp_flags(
 /*=====================*/
 	ulint	id,	/*!< in: space id */
-	uint	flags)	/*!< in: fsp flags */
+	ulint	flags)	/*!< in: fsp flags */
 {
 	fil_space_t*	space;
 

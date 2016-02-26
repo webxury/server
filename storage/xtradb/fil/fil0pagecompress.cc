@@ -531,7 +531,7 @@ fil_decompress_page(
 
 	switch(compression_alg) {
 	case PAGE_ZLIB_ALGORITHM:
-		err= uncompress(in_buf, &len, buf+header_len, (unsigned long)actual_size);
+		err= uncompress(in_buf, (ulong*)&len, buf+header_len, (unsigned long)actual_size);
 
 		/* If uncompress fails it means that page is corrupted */
 		if (err != Z_OK) {

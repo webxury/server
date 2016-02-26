@@ -313,20 +313,20 @@ fil_space_read_crypt_data(
 		ut_error;
 	}
 
-	uint min_key_version = mach_read_from_4
+	uint min_key_version = (uint)mach_read_from_4
 		(page + offset + MAGIC_SZ + 2 + iv_length);
 
-	uint key_id = mach_read_from_4
+	uint key_id = (uint)mach_read_from_4
 		(page + offset + MAGIC_SZ + 2 + iv_length + 4);
 
 	fil_encryption_t encryption = (fil_encryption_t)mach_read_from_1(
 		page + offset + MAGIC_SZ + 2 + iv_length + 8);
 
-	const uint sz = sizeof(fil_space_crypt_t) + iv_length;
+	const uint sz = (uint)sizeof(fil_space_crypt_t) + iv_length;
 	crypt_data = static_cast<fil_space_crypt_t*>(malloc(sz));
 	memset(crypt_data, 0, sz);
 
-	crypt_data->type = type;
+	crypt_data->type = (uint)type;
 	crypt_data->min_key_version = min_key_version;
 	crypt_data->key_id = key_id;
 	crypt_data->page0_offset = offset;
@@ -480,21 +480,21 @@ fil_parse_write_crypt_data(
 
 	ulint space_id = mach_read_from_4(ptr);
 	ptr += 4;
-	uint offset = mach_read_from_2(ptr);
+	uint offset = (uint)mach_read_from_2(ptr);
 	ptr += 2;
-	uint type = mach_read_from_1(ptr);
+	uint type = (uint)mach_read_from_1(ptr);
 	ptr += 1;
-	uint len = mach_read_from_1(ptr);
+	uint len = (uint)mach_read_from_1(ptr);
 	ptr += 1;
 
 	ut_a(type == CRYPT_SCHEME_UNENCRYPTED ||
 	     type == CRYPT_SCHEME_1); // only supported
 
 	ut_a(len == CRYPT_SCHEME_1_IV_LEN); // only supported
-	uint min_key_version = mach_read_from_4(ptr);
+	uint min_key_version = (uint)mach_read_from_4(ptr);
 	ptr += 4;
 
-	uint key_id = mach_read_from_4(ptr);
+	uint key_id = (uint)mach_read_from_4(ptr);
 	ptr += 4;
 
 	fil_encryption_t encryption = (fil_encryption_t)mach_read_from_1(ptr);

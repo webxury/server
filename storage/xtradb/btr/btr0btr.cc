@@ -1402,7 +1402,7 @@ btr_page_free_low(
 			offsets = rec_get_offsets(rec, index,
 						  offsets, ULINT_UNDEFINED,
 						  &heap);
-			uint size = rec_offs_data_size(offsets);
+			size_t size = (size_t)rec_offs_data_size(offsets);
 			memset(rec, 0, size);
 			rec = page_rec_get_next(rec);
 			cnt++;
