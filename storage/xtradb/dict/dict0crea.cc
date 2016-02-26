@@ -1575,7 +1575,7 @@ dict_foreign_def_get(
 	char* fk_def = (char *)mem_heap_alloc(foreign->heap, 4*1024);
 	const char* tbname;
 	char tablebuf[MAX_TABLE_NAME_LEN + 1] = "";
-	ulint i;
+	int i;
 	char* bufend;
 
 	tbname = dict_remove_db_name(foreign->id);

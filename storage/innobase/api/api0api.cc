@@ -608,7 +608,7 @@ ib_trx_read_only(
 {
 	trx_t*		trx = (trx_t*) ib_trx;
 
-	return(trx->read_only);
+	return((ib_u32_t)trx->read_only);
 }
 
 /*****************************************************************//**

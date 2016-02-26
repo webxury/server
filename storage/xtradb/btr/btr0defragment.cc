@@ -604,8 +604,8 @@ btr_defragment_n_pages(
 	ulint		reserved_space;
 	ulint		level;
 	ulint		max_data_size = 0;
-	uint		n_defragmented = 0;
-	uint		n_new_slots;
+	ulint		n_defragmented = 0;
+	ulint		n_new_slots;
 	mem_heap_t*	heap;
 	ibool		end_of_index = FALSE;
 

@@ -247,7 +247,7 @@ btr_page_needs_scrubbing(
 	}
 
 	page_t*	page = buf_block_get_frame(block);
-	uint type = fil_page_get_type(page);
+	ulint type = fil_page_get_type(page);
 
 	if (allocated == BTR_SCRUB_PAGE_ALLOCATED) {
 		if (type != FIL_PAGE_INDEX) {

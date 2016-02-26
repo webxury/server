@@ -399,7 +399,7 @@ pfs_mutex_enter_func(
 
 		locker = PSI_MUTEX_CALL(start_mutex_wait)(
 			&state, mutex->base_mutex.pfs_psi,
-			PSI_MUTEX_LOCK, file_name, line);
+			PSI_MUTEX_LOCK, file_name, (uint)line);
 
 		mutex_enter_func(mutex, file_name, line, priority);
 

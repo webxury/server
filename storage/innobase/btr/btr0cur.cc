@@ -3,7 +3,7 @@
 Copyright (c) 1994, 2015, Oracle and/or its affiliates. All Rights Reserved.
 Copyright (c) 2008, Google Inc.
 Copyright (c) 2012, Facebook Inc.
-Copyright (c) 2015, MariaDB Corporation.
+Copyright (c) 2015, 2016, MariaDB Corporation.
 
 Portions of this file contain modifications contributed and copyrighted by
 Google, Inc. Those modifications are gratefully acknowledged and are described
@@ -4071,7 +4071,7 @@ btr_estimate_number_of_different_key_vals(
 		if (index->stat_index_size > 1) {
 			n_sample_pages = (ullint)(srv_stats_transient_sample_pages < index->stat_index_size) ?
 				ut_min(index->stat_index_size,
-				       log2((double)(index->stat_index_size)*srv_stats_transient_sample_pages))
+					(ulint)log2((double)(index->stat_index_size)*srv_stats_transient_sample_pages))
 				: index->stat_index_size;
 
 		}

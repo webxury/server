@@ -60,7 +60,7 @@ fil_page_encryption_status(
 		}
 	} else {
 		ulint key = mach_read_from_4(buf + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
-		if (!encryption_key_version_exists(crypt_data->key_id, key)) {
+		if (!encryption_key_version_exists((uint)crypt_data->key_id, (uint)key)) {
 			return 1;
 		}
 	}

@@ -5877,8 +5877,8 @@ buf_print_io_instance(
 		pool_info->pages_written_rate);
 
 	if (pool_info->n_page_get_delta) {
-		double hit_rate = ((1000 * pool_info->page_read_delta)
-				/ pool_info->n_page_get_delta);
+		double hit_rate = ((double)(1000 * pool_info->page_read_delta)
+			/ (double)pool_info->n_page_get_delta);
 
 		if (hit_rate > 1000) {
 			hit_rate = 1000;
@@ -6264,7 +6264,7 @@ buf_page_encrypt_before_write(
 
 		ulint key_version = mach_read_from_4(dst_frame + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
 		ut_ad(key_version == 0 || key_version >= bpage->key_version);
-		bpage->key_version = key_version;
+		bpage->key_version = (uint)key_version;
 		bpage->real_size = page_size;
 		slot->out_buf = dst_frame = tmp;
 
@@ -6329,7 +6329,7 @@ buf_page_decrypt_after_read(
 
 	byte* dst_frame = (zip_size) ? bpage->zip.data :
 		((buf_block_t*) bpage)->frame;
-	unsigned key_version =
+	ulint key_version =
 		mach_read_from_4(dst_frame + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
 	bool page_compressed = fil_page_is_compressed(dst_frame);
 	bool page_compressed_encrypted = fil_page_is_compressed_encrypted(dst_frame);
@@ -6348,7 +6348,7 @@ buf_page_decrypt_after_read(
 	}
 
 	/* Store these for corruption check */
-	bpage->key_version = key_version;
+	bpage->key_version = (uint)key_version;
 	bpage->page_encrypted = page_compressed_encrypted;
 	bpage->page_compressed = page_compressed;
 
