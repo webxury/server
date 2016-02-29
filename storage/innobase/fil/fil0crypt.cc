@@ -484,7 +484,7 @@ fil_parse_write_crypt_data(
 	ptr += 2;
 	uint type = (uint)mach_read_from_1(ptr);
 	ptr += 1;
-	uint len = (uint)mach_read_from_1(ptr);
+	int len = (uint)mach_read_from_1(ptr);
 	ptr += 1;
 
 	ut_a(type == CRYPT_SCHEME_UNENCRYPTED ||

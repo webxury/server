@@ -74,7 +74,7 @@ fil_space_get_page_compression_level(
 {
 	if (space && space->table_options) {
 		dict_tableoptions_t* options = (dict_tableoptions_t*)space->table_options;
-		return (options->page_compression_level);
+		return ((ulint)options->page_compression_level);
 	}
 
 	return(0);

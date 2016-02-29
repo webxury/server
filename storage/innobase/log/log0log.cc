@@ -2409,11 +2409,11 @@ log_group_archive_file_header_write(
 
 	mach_write_to_4(buf + LOG_GROUP_ID, group->id);
 	mach_write_to_8(buf + LOG_FILE_START_LSN, start_lsn);
-	mach_write_to_4(buf + LOG_FILE_NO, file_no);
+	mach_write_to_4(buf + LOG_FILE_NO, (ulint)file_no);
 
 	mach_write_to_4(buf + LOG_FILE_ARCH_COMPLETED, FALSE);
 
-	dest_offset = nth_file * group->file_size;
+	dest_offset = (ulint)(nth_file * group->file_size);
 
 	log_sys->n_log_ios++;
 
@@ -2448,7 +2448,7 @@ log_group_archive_completed_header_write(
 	mach_write_to_4(buf + LOG_FILE_ARCH_COMPLETED, TRUE);
 	mach_write_to_8(buf + LOG_FILE_END_LSN, end_lsn);
 
-	dest_offset = nth_file * group->file_size + LOG_FILE_ARCH_COMPLETED;
+	dest_offset = (ulint)(nth_file * group->file_size + LOG_FILE_ARCH_COMPLETED);
 
 	log_sys->n_log_ios++;
 
@@ -2547,7 +2547,7 @@ loop:
 
 		/* Add the archive file as a node to the space */
 
-		fil_node_create(name, group->file_size / UNIV_PAGE_SIZE,
+		fil_node_create(name, (ulint)(group->file_size / UNIV_PAGE_SIZE),
 				group->archive_space_id, FALSE);
 
 		if (next_offset % group->file_size == 0) {
@@ -2560,11 +2560,11 @@ loop:
 		}
 	}
 
-	len = end_lsn - start_lsn;
+	len = (ulint)(end_lsn - start_lsn);
 
 	if (group->file_size < (next_offset % group->file_size) + len) {
 
-		len = group->file_size - (next_offset % group->file_size);
+		len = (ulint)(group->file_size - (next_offset % group->file_size));
 	}
 
 #ifdef UNIV_DEBUG
@@ -2654,9 +2654,9 @@ log_archive_write_complete_groups(void)
 	/* Truncate from the archive file space all but the last
 	file, or if it has been written full, all files */
 
-	n_files = (UNIV_PAGE_SIZE
+	n_files = (ulint)(UNIV_PAGE_SIZE
 		   * fil_space_get_size(group->archive_space_id))
-		/ group->file_size;
+		   / group->file_size;
 	ut_ad(n_files > 0);
 
 	end_offset = group->archived_offset;
@@ -2693,7 +2693,7 @@ log_archive_write_complete_groups(void)
 	}
 
 	fil_space_truncate_start(group->archive_space_id,
-				 trunc_files * group->file_size);
+				(ulint)(trunc_files * group->file_size));
 
 #ifdef UNIV_DEBUG
 	if (log_debug_writes) {
@@ -3147,7 +3147,7 @@ loop:
 		return;
 	}
 
-	age = log->lsn - log->archived_lsn;
+	age = (ulint)(log->lsn - log->archived_lsn);
 
 	if (age > log->max_archived_lsn_age) {
 
@@ -3804,7 +3804,7 @@ DECLARE_THREAD(log_scrub_thread)(
 	while(srv_shutdown_state == SRV_SHUTDOWN_NONE)
 	{
 		/* log scrubbing interval in µs. */
-		ulonglong interval = 1000*1000*512/innodb_scrub_log_speed;
+		ulint interval = 1000*1000*512/innodb_scrub_log_speed;
 
 		os_event_wait_time(log_scrub_event, interval);
 

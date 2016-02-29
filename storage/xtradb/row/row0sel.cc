@@ -4776,8 +4776,8 @@ locks_ok:
 		This optimization can avoid many IOs for certain schemas.
 		*/
 		ibool row_contains_all_values = TRUE;
-		int i;
-		for (i = 0; i < prebuilt->n_template; i++) {
+		ulint i;
+		for (i = 0; i < (ulint)prebuilt->n_template; i++) {
 			/* Condition (1) from above: is the field in the
 			index (prefix or not)? */
 			mysql_row_templ_t* templ =
@@ -4810,7 +4810,7 @@ locks_ok:
 		rec_prefix_field_no instead of rec_field_no, and skip
 		the clustered lookup below. */
 		if (row_contains_all_values) {
-			for (i = 0; i < prebuilt->n_template; i++) {
+			for (i = 0; i < (ulint)prebuilt->n_template; i++) {
 				mysql_row_templ_t* templ =
 					prebuilt->mysql_template + i;
 				templ->rec_field_no =

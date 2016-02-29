@@ -94,7 +94,7 @@ row_merge_encrypt_buf(
 {
 	uint key_version;
 	uint dstlen=0;
-	os_offset_t ofs = (os_offset_t)srv_sort_buf_size * (os_offset_t)offset;
+	uint ofs = (uint)(srv_sort_buf_size * offset);
 
 	key_version =  encryption_key_get_latest_version(crypt_data->key_id);
 
@@ -133,7 +133,7 @@ row_merge_decrypt_buf(
 {
 	uint key_version;
 	uint dstlen=0;
-	os_offset_t ofs = (os_offset_t)srv_sort_buf_size * (os_offset_t)offset;
+	uint ofs = (uint)(srv_sort_buf_size * offset);
 
 	/* Read key_version from begining of the buffer */
 	key_version = mach_read_from_4((byte *)input_buf);
@@ -2007,10 +2007,10 @@ write_buffers:
 		if(read_rows % 1000 == 0) {
 			/* Update progress for each 1000 rows */
 			curr_progress = (read_rows >= table_total_rows) ?
-					pct_cost : 
+					pct_cost :
 				((pct_cost * read_rows) / table_total_rows);
 			/* presenting 10.12% as 1012 integer */
-			onlineddl_pct_progress = curr_progress * 100;
+			onlineddl_pct_progress = (ulint)(curr_progress * 100);
 		}
 	}
 
@@ -2594,7 +2594,7 @@ row_merge_sort(
 				pct_cost :
 				((pct_cost * merge_count) / total_merge_sort_count);
 			/* presenting 10.12% as 1012 integer */;
-			onlineddl_pct_progress = (pct_progress + curr_progress) * 100;
+			onlineddl_pct_progress = (ulint)((pct_progress + curr_progress) * 100);
 		}
 
 		if (error != DB_SUCCESS) {
@@ -2877,7 +2877,7 @@ row_merge_insert_index_tuples(
 					((pct_cost * inserted_rows) / table_total_rows);
 
 				/* presenting 10.12% as 1012 integer */;
-				onlineddl_pct_progress = (pct_progress + curr_progress) * 100;
+				onlineddl_pct_progress = (ulint)((pct_progress + curr_progress) * 100);
 			}
 		}
 	}
@@ -3881,11 +3881,11 @@ row_merge_build_indexes(
 	bool			fts_psort_initiated = false;
 	fil_space_crypt_t *	crypt_data = NULL;
 
-	float total_static_cost = 0;
-	float total_dynamic_cost = 0;
+	double total_static_cost = 0;
+	double total_dynamic_cost = 0;
 	uint total_index_blocks = 0;
-	float pct_cost=0;
-	float pct_progress=0;
+	double pct_cost=0;
+	double pct_progress=0;
 
 	DBUG_ENTER("row_merge_build_indexes");
 

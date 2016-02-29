@@ -742,7 +742,7 @@ create_log_files(
 		UT_LIST_GET_FIRST(log_sys->log_groups)->archived_file_no,
 		TRUE,
 #endif
-		lsn);
+		(ulint)lsn);
 	mutex_exit(&log_sys->mutex);
 
 	return(DB_SUCCESS);

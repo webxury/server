@@ -1839,9 +1839,9 @@ srv_export_innodb_status(void)
 			+= buf_pool->LRU_old_len;
 	}
 	export_vars.innodb_checkpoint_age
-		= (log_sys->lsn - log_sys->last_checkpoint_lsn);
+		= (ulint)(log_sys->lsn - log_sys->last_checkpoint_lsn);
 	export_vars.innodb_checkpoint_max_age
-		= log_sys->max_checkpoint_age;
+		= (ulint)log_sys->max_checkpoint_age;
 	export_vars.innodb_history_list_length
 		= trx_sys->rseg_history_len;
 	ibuf_export_ibuf_status(

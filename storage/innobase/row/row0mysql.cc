@@ -3270,8 +3270,8 @@ void
 fil_wait_crypt_bg_threads(
 	dict_table_t* table)
 {
-	uint start = time(0);
-	uint last = start;
+	time_t start = time(0);
+	time_t last = start;
 
 	if (table->space != 0) {
 		fil_space_crypt_mark_space_closing(table->space);
@@ -3281,12 +3281,12 @@ fil_wait_crypt_bg_threads(
 		dict_mutex_exit_for_mysql();
 		os_thread_sleep(20000);
 		dict_mutex_enter_for_mysql();
-		uint now = time(0);
+		time_t now = time(0);
 		if (now >= last + 30) {
 			fprintf(stderr,
 				"WARNING: waited %u seconds "
 				"for ref-count on table: %s space: %u\n",
-				now - start, table->name, table->space);
+				(uint)(now - start), table->name, table->space);
 			last = now;
 		}
 
@@ -3294,7 +3294,7 @@ fil_wait_crypt_bg_threads(
 			fprintf(stderr,
 				"WARNING: after %u seconds, gave up waiting "
 				"for ref-count on table: %s space: %u\n",
-				now - start, table->name, table->space);
+				(uint)(now - start), table->name, table->space);
 			break;
 		}
 	}

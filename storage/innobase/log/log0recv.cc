@@ -3164,7 +3164,7 @@ recv_recovery_from_checkpoint_start_func(
 		the logs of the archived group */
 
 		group = recv_sys->archive_group;
-		capacity = log_group_get_capacity(group);
+		capacity = (ulint)(log_group_get_capacity(group));
 
 		if (recv_sys->scanned_lsn > checkpoint_lsn + capacity
 		    || checkpoint_lsn > recv_sys->scanned_lsn + capacity) {
@@ -3757,7 +3757,7 @@ ask_again:
 
 	/* Add the archive file as a node to the space */
 
-	fil_node_create(name, 1 + file_size / UNIV_PAGE_SIZE,
+	fil_node_create(name, (ulint)(1 + file_size / UNIV_PAGE_SIZE),
 			group->archive_space_id, FALSE);
 #if RECV_SCAN_SIZE < LOG_FILE_HDR_SIZE
 # error "RECV_SCAN_SIZE < LOG_FILE_HDR_SIZE"
@@ -3837,8 +3837,8 @@ ask_again:
 #endif /* UNIV_DEBUG */
 
 		fil_io(OS_FILE_READ | OS_FILE_LOG, true,
-		       group->archive_space_id, read_offset / UNIV_PAGE_SIZE,
-		       read_offset % UNIV_PAGE_SIZE, len, buf, NULL, 0);
+			group->archive_space_id, (ulint)(read_offset / UNIV_PAGE_SIZE),
+			(ulint)(read_offset % UNIV_PAGE_SIZE), len, buf, NULL, 0);
 
 		ret = recv_scan_log_recs(
 			(buf_pool_get_n_pages()

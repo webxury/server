@@ -119,7 +119,9 @@ UNIV_INTERN ulint	os_innodb_umask = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
 #else
 /** Umask for creating files */
 UNIV_INTERN ulint	os_innodb_umask	= 0;
+#ifndef ECANCELED
 #define ECANCELED  125
+#endif
 #endif /* __WIN__ */
 
 #ifndef UNIV_HOTBACKUP
@@ -1966,9 +1968,6 @@ os_file_create_func(
 	attributes |= FILE_FLAG_NO_BUFFERING;
 #else
 	if (purpose == OS_FILE_AIO) {
-
-	bool            encrypt_later;  /*!< should the page be encrypted
-					before write */
 
 #ifdef WIN_ASYNC_IO
 		/* If specified, use asynchronous (overlapped) io and no

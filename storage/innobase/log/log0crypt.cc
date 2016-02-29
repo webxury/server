@@ -442,7 +442,7 @@ log_crypt_write_checkpoint_buf(
 	buf += 2;
 	for (size_t i = 0; i < crypt_info.size(); i++) {
 		struct crypt_info_t* it = &crypt_info[i];
-		mach_write_to_4(buf + 0, it->checkpoint_no);
+		mach_write_to_4(buf + 0, (ulint)(it->checkpoint_no));
 		mach_write_to_4(buf + 4, it->key_version);
 		memcpy(buf + 8, it->crypt_msg, MY_AES_BLOCK_SIZE);
 		memcpy(buf + 24, it->crypt_nonce, MY_AES_BLOCK_SIZE);
