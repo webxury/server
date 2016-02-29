@@ -65,6 +65,7 @@ TARGET_LINK_LIBRARIES(mysqlcheck ${CLIENT_LIB})
 MYSQL_ADD_EXECUTABLE(mysqldump mysqldump.c ../sql-common/my_user.c)
 TARGET_LINK_LIBRARIES(mysqldump ${CLIENT_LIB})
 
+
 MYSQL_ADD_EXECUTABLE(mysqlimport mysqlimport.c)
 SET_SOURCE_FILES_PROPERTIES(mysqlimport.c PROPERTIES COMPILE_FLAGS "-DTHREADS")
 TARGET_LINK_LIBRARIES(mysqlimport ${CLIENT_LIB})
@@ -100,6 +101,10 @@ TARGET_LINK_LIBRARIES(async_example ${CLIENT_LIB})
 
 SET_TARGET_PROPERTIES (mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysqlslap mysql_plugin async_example
 PROPERTIES HAS_CXX TRUE)
+
+FOREACH(t mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysqlslap mysql_plugin async_example)
+  ADD_DEPENDENCIES(${t} GenError)
+ENDFOREACH()
 
 ADD_DEFINITIONS(-DHAVE_DLOPEN)
 

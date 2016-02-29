@@ -1653,8 +1653,8 @@ static void maybe_exit(int error)
 static int connect_to_db(char *host, char *user,char *passwd)
 {
   char buff[20+FN_REFLEN];
-  DBUG_ENTER("connect_to_db");
   my_bool reconnect;
+  DBUG_ENTER("connect_to_db");
 
   verbose_msg("-- Connecting to %s...\n", host ? host : "localhost");
   mysql_init(&mysql_connection);
