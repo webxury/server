@@ -9,7 +9,6 @@ extra-max-connections=1
 
 [client]
 connect-timeout=  2 
-read-timeout=  2
 
 [ENV]
 MASTER_EXTRA_PORT= @OPT.port
