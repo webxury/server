@@ -1526,9 +1526,7 @@ static void cleanup_and_exit(int exit_code)
       DBUG_ASSERT(0);
     }
   }
-
   sf_leaking_memory= 0; /* all memory should be freed by now */
-  sleep(10);
   exit(exit_code);
 }
 

@@ -1139,6 +1139,9 @@ int main(int argc,char *argv[])
 
   outfile[0]=0;			// no (default) outfile
   strmov(pager, "stdout");	// the default, if --pager wasn't given
+
+  mysql_init(&mysql);
+
   {
     char *tmp=getenv("PAGER");
     if (tmp && strlen(tmp))
@@ -1199,7 +1202,6 @@ int main(int argc,char *argv[])
   glob_buffer.realloc(512);
   completion_hash_init(&ht, 128);
   init_alloc_root(&hash_mem_root, 16384, 0, MYF(0));
-  bzero((char*) &mysql, sizeof(mysql));
   if (sql_connect(current_host,current_db,current_user,opt_password,
 		  opt_silent))
   {
