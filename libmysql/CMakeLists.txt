@@ -16,15 +16,28 @@
 
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/mariadb_connector_c.cmake)
 
-SET(CONNECTOR_C_INSTALLDIR "${CMAKE_BINARY_DIR}/mariadb-connector-c/${CMAKE_CFG_INTDIR}" CACHE STRING "")
+SET(CONNECTOR_C_INSTALLDIR "${CMAKE_CURRENT_BINARY_DIR}/mariadb-connector-c/${CMAKE_CFG_INTDIR}" CACHE STRING "")
+
+IF(IS_DIRECTORY ${CMAKE_SOURCE_DIR}/mariadb-connector-c)
+ # Building from source package
+ SET(CONNECTOR_C_SOURCE_DIR  ${CMAKE_SOURCE_DIR}/mariadb-connector-c)
+ SET(GIT_PARAMS)
+ELSE()
+ # Building from git, use git to get Connector/C
+ SET(GIT_PARAMS 
+  GIT_REPOSITORY "https://github.com/MariaDB/mariadb-connector-c/"
+  GIT_TAG "master"
+ )
+ SET(SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/mariadb-connector-c-src)
+ENDIF()
+
 INCLUDE(ExternalProject)
 ExternalProject_Add(
   mariadb_connector_c
-  GIT_REPOSITORY "https://github.com/MariaDB/mariadb-connector-c/"
-  GIT_TAG "master"
+  ${GIT_PARAMS}
   UPDATE_COMMAND ""
   PATCH_COMMAND ""
-  SOURCE_DIR ${CMAKE_BINARY_DIR}/mariadb-connector-c-src
+  SOURCE_DIR ${CONNECTOR_C_SOURCE_DIR}
   INSTALL_DIR ${CONNECTOR_C_INSTALLDIR}
   CMAKE_ARGS ${CC_CMAKE_OPTS}
   "-DCMAKE_INSTALL_PREFIX=${CONNECTOR_C_INSTALLDIR}"
