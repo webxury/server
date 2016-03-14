@@ -107,7 +107,7 @@ fil_compress_page(
 	byte*	lzo_mem)	/*!< in: temporal memory used by LZO */
 {
 	int err = Z_OK;
-	int comp_level = level;
+	int comp_level = (int)level;
 	ulint header_len = FIL_PAGE_DATA + FIL_PAGE_COMPRESSED_SIZE;
 	ulint write_size=0;
 	/* Cache to avoid change during function execution */
@@ -302,7 +302,7 @@ fil_compress_page(
 #endif /* HAVE_SNAPPY */
 
 	case PAGE_ZLIB_ALGORITHM:
-		err = compress2(out_buf+header_len, (ulong*)&write_size, buf, len, comp_level);
+		err = compress2(out_buf+header_len, (ulong*)&write_size, buf, (ulong)len, (int)comp_level);
 
 		if (err != Z_OK) {
 			/* If error we leave the actual page as it was */

@@ -1737,7 +1737,7 @@ dict_create_add_foreign_to_dictionary(
 			innobase_convert_name(buf, MAX_TABLE_NAME_LEN,
 				foreign->id, strlen(foreign->id), trx->mysql_thd, FALSE);
 			fk_def = dict_foreign_def_get((dict_foreign_t*)foreign, trx);
-			dict_foreign_def_get_fields((dict_foreign_t*)foreign, trx, &field, &field2, i);
+			dict_foreign_def_get_fields((dict_foreign_t*)foreign, trx, &field, &field2, (int)i);
 
 			ib_push_warning(trx, error,
 				"Create or Alter table %s with foreign key constraint"

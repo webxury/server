@@ -166,12 +166,12 @@ dict_mem_table_is_system(
 	/* table has the following format: database/table
 	and some system table are of the form SYS_* */
 	if (strchr(name, '/')) {
-		int table_len = strlen(name);
+		size_t table_len = strlen(name);
 		const char *system_db;
 		int i = 0;
 		while ((system_db = innobase_system_databases[i++])
 			&& (system_db != NullS)) {
-			int len = strlen(system_db);
+			size_t len = strlen(system_db);
 			if (table_len > len && !strncmp(name, system_db, len)) {
 				return true;
 			}

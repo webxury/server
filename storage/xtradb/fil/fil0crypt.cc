@@ -322,7 +322,7 @@ fil_space_read_crypt_data(
 	fil_encryption_t encryption = (fil_encryption_t)mach_read_from_1(
 		page + offset + MAGIC_SZ + 2 + iv_length + 8);
 
-	const uint sz = (uint)sizeof(fil_space_crypt_t) + iv_length;
+	size_t sz = sizeof(fil_space_crypt_t) + iv_length;
 	crypt_data = static_cast<fil_space_crypt_t*>(malloc(sz));
 	memset(crypt_data, 0, sz);
 
@@ -589,9 +589,9 @@ fil_encrypt_buf(
 		srclen = mach_read_from_2(src_frame + FIL_PAGE_DATA);
 	}
 
-	int rc = encryption_scheme_encrypt(src, srclen, dst, &dstlen,
-					   crypt_data, key_version,
-					   space, offset, lsn);
+	int rc = encryption_scheme_encrypt(src, (uint)srclen, dst, (uint *)&dstlen,
+		crypt_data, key_version,
+		(uint)space, (uint)offset, (unsigned long long)lsn);
 
 	if (! ((rc == MY_AES_OK) && ((ulint) dstlen == srclen))) {
 		ib_logf(IB_LOG_LEVEL_FATAL,
@@ -710,7 +710,7 @@ fil_space_decrypt(
 						error code */
 {
 	ulint page_type = mach_read_from_2(src_frame+FIL_PAGE_TYPE);
-	uint key_version = mach_read_from_4(src_frame + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
+	uint key_version = (uint)mach_read_from_4(src_frame + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
 	bool page_compressed = (page_type == FIL_PAGE_PAGE_COMPRESSED_ENCRYPTED);
 
 	*err = DB_SUCCESS;
@@ -746,9 +746,9 @@ fil_space_decrypt(
 		srclen = mach_read_from_2(src_frame + FIL_PAGE_DATA);
 	}
 
-	int rc = encryption_scheme_decrypt(src, srclen, dst, &dstlen,
-					   crypt_data, key_version,
-					   space, offset, lsn);
+	int rc = encryption_scheme_decrypt(src, (uint)srclen, dst, (uint *)&dstlen,
+		crypt_data, key_version,
+		(uint)space, (uint)offset, (unsigned long long)lsn);
 
 	if (! ((rc == MY_AES_OK) && ((ulint) dstlen == srclen))) {
 
@@ -821,7 +821,7 @@ Calculate post encryption checksum
 @return page checksum or BUF_NO_CHECKSUM_MAGIC
 not needed. */
 UNIV_INTERN
-ulint
+ib_uint32_t
 fil_crypt_calculate_checksum(
 /*=========================*/
 	ulint	zip_size,	/*!< in: zip_size or 0 */
@@ -850,7 +850,7 @@ fil_crypt_calculate_checksum(
 			* if new enum is added and not handled here */
 		}
 	} else {
-		checksum = page_zip_calc_checksum(dst_frame, zip_size,
+		checksum = (ib_uint32_t)page_zip_calc_checksum(dst_frame, zip_size,
 				                          algorithm);
 	}
 

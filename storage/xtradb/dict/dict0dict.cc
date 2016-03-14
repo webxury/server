@@ -6879,7 +6879,7 @@ dict_fs2utf8(
 	db[db_len] = '\0';
 
 	strconvert(
-		&my_charset_filename, db, db_len, system_charset_info,
+		&my_charset_filename, db, (uint)db_len, system_charset_info,
 		db_utf8, static_cast<uint>(db_utf8_size), &errors);
 
 	/* convert each # to @0023 in table name and store the result in buf */

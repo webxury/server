@@ -415,7 +415,7 @@ Calculate post encryption checksum
 @return page checksum or BUF_NO_CHECKSUM_MAGIC
 not needed. */
 UNIV_INTERN
-ulint
+ib_uint32_t
 fil_crypt_calculate_checksum(
 /*=========================*/
 	ulint	zip_size,	/*!< in: zip_size or 0 */
