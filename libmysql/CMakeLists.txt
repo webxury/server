@@ -28,7 +28,7 @@ ELSE()
   GIT_REPOSITORY "https://github.com/MariaDB/mariadb-connector-c/"
   GIT_TAG "master"
  )
- SET(SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/mariadb-connector-c-src)
+ SET(CONNECTOR_C_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/mariadb-connector-c-src)
 ENDIF()
 
 INCLUDE(ExternalProject)
