@@ -103,7 +103,7 @@ SET_TARGET_PROPERTIES (mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow 
 PROPERTIES HAS_CXX TRUE)
 
 FOREACH(t mysql mysqltest mysqltest mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysql_plugin mysqlbinlog
-  mysqladmin mysqlslap)
+  mysqladmin mysqlslap async_example)
   ADD_DEPENDENCIES(${t} GenError mariadb_connector_c)
 ENDFOREACH()
 
