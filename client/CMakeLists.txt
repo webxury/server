@@ -102,7 +102,7 @@ TARGET_LINK_LIBRARIES(async_example ${CLIENT_LIB})
 SET_TARGET_PROPERTIES (mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysqlslap mysql_plugin async_example
 PROPERTIES HAS_CXX TRUE)
 
-FOREACH(t mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysqlslap mysql_plugin async_example)
+FOREACH(t mysqladmin mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysqlslap mysql_plugin async_example)
   ADD_DEPENDENCIES(${t} GenError ${CLIENT_LIB})
 ENDFOREACH()
 
