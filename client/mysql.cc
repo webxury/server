@@ -46,6 +46,7 @@
 #include <locale.h>
 #endif
 
+
 const char *VER= "15.1";
 
 /* Don't try to make a nice table if the data is too big */
@@ -1348,6 +1349,45 @@ sig_handler mysql_end(int sig)
   exit(status.exit_status);
 }
 
+/*
+  set connection-specific options and call mysql_real_connect
+*/
+static bool do_connect(MYSQL *mysql, const char *host, const char *user,
+                       const char *password, const char *database, ulong flags)
+{
+  if (opt_secure_auth)
+    mysql_options(mysql, MYSQL_SECURE_AUTH, (char *) &opt_secure_auth);
+#if defined(HAVE_OPENSSL) && !defined(EMBEDDED_LIBRARY)
+  if (opt_use_ssl)
+  {
+    mysql_ssl_set(mysql, opt_ssl_key, opt_ssl_cert, opt_ssl_ca, opt_ssl_capath, opt_ssl_cipher);
+    mysql_options(mysql, MYSQL_OPT_SSL_CRL, opt_ssl_crl);
+    mysql_options(mysql, MYSQL_OPT_SSL_CRLPATH, opt_ssl_crlpath);
+    char enforce= 1;
+    mysql_options(mysql, MYSQL_OPT_SSL_ENFORCE, &enforce);
+  }
+  mysql_options(mysql,MYSQL_OPT_SSL_VERIFY_SERVER_CERT,
+                (char*)&opt_ssl_verify_server_cert);
+#endif
+  if (opt_protocol)
+    mysql_options(mysql,MYSQL_OPT_PROTOCOL,(char*)&opt_protocol);
+#ifdef HAVE_SMEM
+  if (shared_memory_base_name)
+    mysql_options(mysql,MYSQL_SHARED_MEMORY_BASE_NAME,shared_memory_base_name);
+#endif
+  if (opt_plugin_dir && *opt_plugin_dir)
+    mysql_options(mysql, MYSQL_PLUGIN_DIR, opt_plugin_dir);
+
+  if (opt_default_auth && *opt_default_auth)
+    mysql_options(mysql, MYSQL_DEFAULT_AUTH, opt_default_auth);
+
+  mysql_options(mysql, MYSQL_OPT_CONNECT_ATTR_RESET, 0);
+  mysql_options4(mysql, MYSQL_OPT_CONNECT_ATTR_ADD,
+                 "program_name", "mysql");
+  return mysql_real_connect(mysql, host, user, password, database,
+                            opt_mysql_port, opt_mysql_unix_port, flags);
+}
+
 
 /*
   This function handles sigint calls
@@ -1369,11 +1409,7 @@ sig_handler handle_sigint(int sig)
   }
 
   kill_mysql= mysql_init(kill_mysql);
-  mysql_options(kill_mysql, MYSQL_OPT_CONNECT_ATTR_RESET, 0);
-  mysql_options4(kill_mysql, MYSQL_OPT_CONNECT_ATTR_ADD,
-                 "program_name", "mysql");
-  if (!mysql_real_connect(kill_mysql,current_host, current_user, opt_password,
-                          "", opt_mysql_port, opt_mysql_unix_port,0))
+  if (!do_connect(kill_mysql,current_host, current_user, opt_password, "", 0))
   {
     tee_fprintf(stdout, "Ctrl-C -- sorry, cannot connect to server to kill query, giving up ...\n");
     goto err;
@@ -4590,8 +4626,6 @@ sql_real_connect(char *host,char *database,char *user,char *password,
   }
   if (opt_compress)
     mysql_options(&mysql,MYSQL_OPT_COMPRESS,NullS);
-  if (opt_secure_auth)
-    mysql_options(&mysql, MYSQL_SECURE_AUTH, (char *) &opt_secure_auth);
   if (using_opt_local_infile)
     mysql_options(&mysql,MYSQL_OPT_LOCAL_INFILE, (char*) &opt_local_infile);
 #if !defined(EMBEDDED_LIBRARY)
@@ -4622,18 +4656,8 @@ sql_real_connect(char *host,char *database,char *user,char *password,
 
   mysql_options(&mysql, MYSQL_SET_CHARSET_NAME, default_charset);
 
-  if (opt_plugin_dir && *opt_plugin_dir)
-    mysql_options(&mysql, MYSQL_PLUGIN_DIR, opt_plugin_dir);
-
-  if (opt_default_auth && *opt_default_auth)
-    mysql_options(&mysql, MYSQL_DEFAULT_AUTH, opt_default_auth);
-
-  mysql_options(&mysql, MYSQL_OPT_CONNECT_ATTR_RESET, 0);
-  mysql_options4(&mysql, MYSQL_OPT_CONNECT_ATTR_ADD,
-                 "program_name", "mysql");
-  if (!mysql_real_connect(&mysql, host, user, password,
-                          database, opt_mysql_port, opt_mysql_unix_port,
-                          connect_flag | CLIENT_MULTI_STATEMENTS))
+  if (!do_connect(&mysql, host, user, password, database,
+                  connect_flag | CLIENT_MULTI_STATEMENTS))
   {
     if (!silent ||
 	(mysql_errno(&mysql) != CR_CONN_HOST_ERROR &&
@@ -4657,8 +4681,8 @@ sql_real_connect(char *host,char *database,char *user,char *password,
   mysql_options(&mysql, MYSQL_OPT_RECONNECT, &debug_info_flag);
 
   /*
-    CLIENT_PROGRESS is set only if we requsted it in mysql_real_connect()
-    and the server also supports it
+    CLIENT_PROGRESS is set only if we requested it in
+    mysql_real_connect() and the server also supports it
   */
   if (mysql.client_flag & CLIENT_PROGRESS)
     mysql_options(&mysql, MYSQL_PROGRESS_CALLBACK, (void*) report_progress);

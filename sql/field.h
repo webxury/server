@@ -609,6 +609,13 @@ public:
   {
     in_partitioning_expr= TRUE;
   }
+  bool is_equal(Virtual_column_info* vcol)
+  {
+    return field_type == vcol->get_real_type()
+        && stored_in_db == vcol->is_stored()
+        && expr_str.length == vcol->expr_str.length
+        && memcmp(expr_str.str, vcol->expr_str.str, expr_str.length) == 0;
+  }
 };
 
 class Field: public Value_source
@@ -1700,6 +1707,16 @@ public:
     return do_field_real;
   }
   int save_in_field(Field *to) { return to->store(val_real()); }
+  bool memcpy_field_possible(const Field *from) const
+  {
+    /*
+      Cannot do memcpy from a longer field to a shorter field,
+      e.g. a DOUBLE(53,10) into a DOUBLE(10,10).
+      But it should be OK the other way around.
+    */
+    return Field_num::memcpy_field_possible(from) &&
+           field_length >= from->field_length;
+  }
   int store_decimal(const my_decimal *);
   int  store_time_dec(MYSQL_TIME *ltime, uint dec);
   bool get_date(MYSQL_TIME *ltime, ulonglong fuzzydate);
@@ -3159,7 +3176,7 @@ public:
   int  store_field(Field *from)
   {                                             // Be sure the value is stored
     from->val_str(&value);
-    if (!value.is_alloced() && from->is_updatable())
+    if (table->copy_blobs || (!value.is_alloced() && from->is_updatable()))
       value.copy();
     return store(value.ptr(), value.length(), from->charset());
   }

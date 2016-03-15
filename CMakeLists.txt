@@ -349,11 +349,9 @@ IF(WITH_UNIT_TESTS)
  ENDIF()
 ENDIF()
 
-IF(NOT WITHOUT_SERVER)
- SET (MYSQLD_STATIC_PLUGIN_LIBS "" CACHE INTERNAL "")
- # Add storage engines and plugins.
- CONFIGURE_PLUGINS()
-ENDIF()
+SET (MYSQLD_STATIC_PLUGIN_LIBS "" CACHE INTERNAL "")
+# Add storage engines and plugins.
+CONFIGURE_PLUGINS()
 
 ADD_SUBDIRECTORY(include)
 ADD_SUBDIRECTORY(dbug)
@@ -383,6 +381,10 @@ IF(NOT WITHOUT_SERVER)
   ADD_SUBDIRECTORY(mysql-test)
   ADD_SUBDIRECTORY(mysql-test/lib/My/SafeProcess)
   ADD_SUBDIRECTORY(sql-bench)
+  IF(WIN32)
+    ADD_SUBDIRECTORY(win/upgrade_wizard)
+    ADD_SUBDIRECTORY(win/packaging)
+  ENDIF()
 ENDIF()
 
 IF(UNIX)
@@ -392,10 +394,7 @@ ENDIF()
 INCLUDE(cmake/abi_check.cmake)
 INCLUDE(cmake/tags.cmake)
 
-IF(WIN32)
-  ADD_SUBDIRECTORY(win/upgrade_wizard)
-  ADD_SUBDIRECTORY(win/packaging)
-ENDIF()
+
 
 
 INCLUDE(for_clients)

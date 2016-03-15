@@ -447,6 +447,55 @@ static void test_prepare_simple()
 
   mysql_stmt_close(stmt);
 
+  /* show create */
+  strmov(query, "SHOW CREATE TABLE test_prepare_simple");
+  stmt= mysql_simple_prepare(mysql, query);
+  check_stmt(stmt);
+  DIE_UNLESS(mysql_stmt_field_count(stmt) == 2);
+  mysql_stmt_close(stmt);
+
+  /* show create database */
+  strmov(query, "SHOW CREATE DATABASE test");
+  stmt= mysql_simple_prepare(mysql, query);
+  check_stmt(stmt);
+  DIE_UNLESS(mysql_stmt_field_count(stmt) == 2);
+  mysql_stmt_close(stmt);
+
+  /* show grants */
+  strmov(query, "SHOW GRANTS");
+  stmt= mysql_simple_prepare(mysql, query);
+  check_stmt(stmt);
+  DIE_UNLESS(mysql_stmt_field_count(stmt) == 1);
+  mysql_stmt_close(stmt);
+
+  /* show slave status */
+  strmov(query, "SHOW SLAVE STATUS");
+  stmt= mysql_simple_prepare(mysql, query);
+  check_stmt(stmt);
+  DIE_UNLESS(mysql_stmt_field_count(stmt) == 47);
+  mysql_stmt_close(stmt);
+
+  /* show master status */
+  strmov(query, "SHOW MASTER STATUS");
+  stmt= mysql_simple_prepare(mysql, query);
+  check_stmt(stmt);
+  DIE_UNLESS(mysql_stmt_field_count(stmt) == 4);
+  mysql_stmt_close(stmt);
+
+  /* show create procedure */
+  strmov(query, "SHOW CREATE PROCEDURE e1;");
+  stmt= mysql_simple_prepare(mysql, query);
+  check_stmt(stmt);
+  DIE_UNLESS(mysql_stmt_field_count(stmt) == 6);
+  mysql_stmt_close(stmt);
+
+  /* show create function */
+  strmov(query, "SHOW CREATE FUNCTION e1;");
+  stmt= mysql_simple_prepare(mysql, query);
+  check_stmt(stmt);
+  DIE_UNLESS(mysql_stmt_field_count(stmt) == 6);
+  mysql_stmt_close(stmt);
+
   /* now fetch the results ..*/
   rc= mysql_commit(mysql);
   myquery(rc);
@@ -15368,7 +15417,7 @@ static void test_mysql_insert_id()
 
   myheader("test_mysql_insert_id");
 
-  rc= mysql_query(mysql, "drop table if exists t1");
+  rc= mysql_query(mysql, "drop table if exists t1,t2");
   myquery(rc);
   /* table without auto_increment column */
   rc= mysql_query(mysql, "create table t1 (f1 int, f2 varchar(255), key(f1))");
@@ -18732,7 +18781,10 @@ static void test_progress_reporting()
 
   myheader("test_progress_reporting");
 
+
   conn= client_connect(CLIENT_PROGRESS, MYSQL_PROTOCOL_TCP, 0);
+  if (!(conn->server_capabilities & CLIENT_PROGRESS))
+    return;
   DIE_UNLESS(conn->client_flag & CLIENT_PROGRESS);
 
   mysql_options(conn, MYSQL_PROGRESS_CALLBACK, (void*) report_progress);

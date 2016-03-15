@@ -1,6 +1,6 @@
 /*
    Copyright (c) 2000, 2015, Oracle and/or its affiliates.
-   Copyright (c) 2009, 2015, MariaDB
+   Copyright (c) 2009, 2016, MariaDB
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -704,6 +704,7 @@ typedef struct system_status_var
   ulong com_stmt_reset;
   ulong com_stmt_close;
 
+  ulong com_register_slave;
   ulong created_tmp_disk_tables_;
   ulong created_tmp_tables_;
   ulong ha_commit_count;
@@ -1184,7 +1185,8 @@ public:
     priv_user - The user privilege we are using. May be "" for anonymous user.
     ip - client IP
   */
-  char   *host, *user, *ip;
+  const char *host;
+  char   *user, *ip;
   char   priv_user[USERNAME_LENGTH];
   char   proxy_user[USERNAME_LENGTH + MAX_HOSTNAME + 5];
   /* The host privilege we are using */
@@ -1411,7 +1413,7 @@ public:
   Discrete_intervals_list auto_inc_intervals_forced;
   ulonglong limit_found_rows;
   ha_rows    cuted_fields, sent_row_count, examined_row_count;
-  ulong client_capabilities;
+  ulonglong client_capabilities;
   ulong query_plan_flags; 
   uint in_sub_stmt;
   bool enable_slow_log;
@@ -2044,7 +2046,7 @@ public:
   /* Needed by MariaDB semi sync replication */
   Trans_binlog_info *semisync_info;
 
-  ulong client_capabilities;		/* What the client supports */
+  ulonglong client_capabilities;  /* What the client supports */
   ulong max_client_packet_length;
 
   HASH		handler_tables_hash;
@@ -2086,7 +2088,7 @@ public:
     bool       report_to_client;
     /*
       true, if we will send progress report packets to a client
-      (client has requested them, see CLIENT_PROGRESS; report_to_client
+      (client has requested them, see MARIADB_CLIENT_PROGRESS; report_to_client
       is true; not in sub-statement)
     */
     bool       report;
@@ -3990,7 +3992,13 @@ public:
 #endif /*  GTID_SUPPORT */
   void                      *wsrep_apply_format;
   char                      wsrep_info[128]; /* string for dynamic proc info */
-  bool                      wsrep_skip_append_keys;
+  /*
+    When enabled, do not replicate/binlog updates from the current table that's
+    being processed. At the moment, it is used to keep mysql.gtid_slave_pos
+    table updates from being replicated to other nodes via galera replication.
+  */
+  bool                      wsrep_ignore_table;
+  wsrep_gtid_t              wsrep_sync_wait_gtid;
 #endif /* WITH_WSREP */
 
   /* Handling of timeouts for commands */
@@ -4026,8 +4034,41 @@ public:
   {
     main_lex.restore_set_statement_var();
   }
+
+  /*
+    Reset current_linfo
+    Setting current_linfo to 0 needs to be done with LOCK_thread_count to
+    ensure that adjust_linfo_offsets doesn't use a structure that may
+    be deleted.
+  */
+  inline void reset_current_linfo()
+  {
+    mysql_mutex_lock(&LOCK_thread_count);
+    current_linfo= 0;
+    mysql_mutex_unlock(&LOCK_thread_count);
+  }
 };
 
+inline void add_to_active_threads(THD *thd)
+{
+  mysql_mutex_lock(&LOCK_thread_count);
+  threads.append(thd);
+  mysql_mutex_unlock(&LOCK_thread_count);
+}
+
+/*
+  This should be called when you want to delete a thd that was not
+  running any queries.
+  This function will assert if the THD was not linked.
+*/
+
+inline void unlink_not_visible_thd(THD *thd)
+{
+  thd->assert_if_linked();
+  mysql_mutex_lock(&LOCK_thread_count);
+  thd->unlink();
+  mysql_mutex_unlock(&LOCK_thread_count);
+}
 
 /** A short cut for thd->get_stmt_da()->set_ok_status(). */
 
@@ -4460,10 +4501,14 @@ public:
 #define TMP_ENGINE_COLUMNDEF MARIA_COLUMNDEF
 #define TMP_ENGINE_HTON maria_hton
 #define TMP_ENGINE_NAME "Aria"
+inline uint tmp_table_max_key_length() { return maria_max_key_length(); }
+inline uint tmp_table_max_key_parts() { return maria_max_key_segments(); }
 #else
 #define TMP_ENGINE_COLUMNDEF MI_COLUMNDEF
 #define TMP_ENGINE_HTON myisam_hton
 #define TMP_ENGINE_NAME "MyISAM"
+inline uint tmp_table_max_key_length() { return MI_MAX_KEY_LENGTH; }
+inline uint tmp_table_max_key_parts() { return MI_MAX_KEY_SEG; }
 #endif
 
 /*

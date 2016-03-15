@@ -3947,21 +3947,21 @@ ER_ERROR_DURING_CHECKPOINT
         swe "Fick fel %M vid CHECKPOINT"
         ukr "Отримано помилку %M під час CHECKPOINT"
 ER_NEW_ABORTING_CONNECTION 08S01 
-        cze "Spojení %ld do databáze: '%-.192s' uživatel: '%-.48s' stroj: '%-.64s' (%-.64s) bylo přerušeno"
-        dan "Afbrød forbindelsen %ld til databasen '%-.192s' bruger: '%-.48s' vært: '%-.64s' (%-.64s)"
-        nla "Afgebroken verbinding %ld naar db: '%-.192s' gebruiker: '%-.48s' host: '%-.64s' (%-.64s)"
-        eng "Aborted connection %ld to db: '%-.192s' user: '%-.48s' host: '%-.64s' (%-.64s)"
-        est "Ühendus katkestatud %ld andmebaas: '%-.192s' kasutaja: '%-.48s' masin: '%-.64s' (%-.64s)"
-        fre "Connection %ld avortée vers la bd: '%-.192s' utilisateur: '%-.48s' hôte: '%-.64s' (%-.64s)"
-        ger "Abbruch der Verbindung %ld zur Datenbank '%-.192s'. Benutzer: '%-.48s', Host: '%-.64s' (%-.64s)"
-        ita "Interrotta la connessione %ld al db: ''%-.192s' utente: '%-.48s' host: '%-.64s' (%-.64s)"
-        jpn "接続 %ld が中断されました。データベース: '%-.192s' ユーザー: '%-.48s' ホスト: '%-.64s' (%-.64s)"
-        por "Conexão %ld abortada para banco de dados '%-.192s' - usuário '%-.48s' - 'host' '%-.64s' ('%-.64s')"
-        rus "Прервано соединение %ld к базе данных '%-.192s' пользователя '%-.48s' с хоста '%-.64s' (%-.64s)"
-        serbian "Prekinuta konekcija broj %ld ka bazi: '%-.192s' korisnik je bio: '%-.48s' a host: '%-.64s' (%-.64s)"
-        spa "Abortada conexión %ld para db: '%-.192s' usuario: '%-.48s' servidor: '%-.64s' (%-.64s)"
-        swe "Avbröt länken för tråd %ld till db '%-.192s', användare '%-.48s', host '%-.64s' (%-.64s)"
-        ukr "Перервано з'єднання %ld до бази данних: '%-.192s' користувач: '%-.48s' хост: '%-.64s' (%-.64s)"
+        cze "Spojení %lld do databáze: '%-.192s' uživatel: '%-.48s' stroj: '%-.64s' (%-.64s) bylo přerušeno"
+        dan "Afbrød forbindelsen %lld til databasen '%-.192s' bruger: '%-.48s' vært: '%-.64s' (%-.64s)"
+        nla "Afgebroken verbinding %lld naar db: '%-.192s' gebruiker: '%-.48s' host: '%-.64s' (%-.64s)"
+        eng "Aborted connection %lld to db: '%-.192s' user: '%-.48s' host: '%-.64s' (%-.64s)"
+        est "Ühendus katkestatud %lld andmebaas: '%-.192s' kasutaja: '%-.48s' masin: '%-.64s' (%-.64s)"
+        fre "Connection %lld avortée vers la bd: '%-.192s' utilisateur: '%-.48s' hôte: '%-.64s' (%-.64s)"
+        ger "Abbruch der Verbindung %lld zur Datenbank '%-.192s'. Benutzer: '%-.48s', Host: '%-.64s' (%-.64s)"
+        ita "Interrotta la connessione %lld al db: ''%-.192s' utente: '%-.48s' host: '%-.64s' (%-.64s)"
+        jpn "接続 %lld が中断されました。データベース: '%-.192s' ユーザー: '%-.48s' ホスト: '%-.64s' (%-.64s)"
+        por "Conexão %lld abortada para banco de dados '%-.192s' - usuário '%-.48s' - 'host' '%-.64s' ('%-.64s')"
+        rus "Прервано соединение %lld к базе данных '%-.192s' пользователя '%-.48s' с хоста '%-.64s' (%-.64s)"
+        serbian "Prekinuta konekcija broj %lld ka bazi: '%-.192s' korisnik je bio: '%-.48s' a host: '%-.64s' (%-.64s)"
+        spa "Abortada conexión %lld para db: '%-.192s' usuario: '%-.48s' servidor: '%-.64s' (%-.64s)"
+        swe "Avbröt länken för tråd %lld till db '%-.192s', användare '%-.48s', host '%-.64s' (%-.64s)"
+        ukr "Перервано з'єднання %lld до бази данних: '%-.192s' користувач: '%-.48s' хост: '%-.64s' (%-.64s)"
 ER_UNUSED_10
         eng "You should never see it"
 ER_FLUSH_MASTER_BINLOG_CLOSED  
@@ -7106,7 +7106,7 @@ ER_PRIOR_COMMIT_FAILED
 ER_IT_IS_A_VIEW 42S02
         eng "'%-.192s' is a view"
 ER_SLAVE_SKIP_NOT_IN_GTID
-	eng "When using GTID, @@sql_slave_skip_counter can not be used. Instead, setting @@gtid_slave_pos explicitly can be used to skip to after a given GTID position."
+	eng "When using parallel replication and GTID with multiple replication domains, @@sql_slave_skip_counter can not be used. Instead, setting @@gtid_slave_pos explicitly can be used to skip to after a given GTID position."
 ER_TABLE_DEFINITION_TOO_BIG
         eng "The definition for table %`s is too big"
 ER_PLUGIN_INSTALLED
@@ -7136,3 +7136,6 @@ ER_KILL_QUERY_DENIED_ERROR
         eng "You are not owner of query %lu"
         ger "Sie sind nicht Eigentümer von Abfrage %lu"
         rus "Вы не являетесь владельцем запроса %lu"
+ER_NO_EIS_FOR_FIELD
+        eng "Engine-independent statistics are not collected for column '%s'"
+        ukr "Незалежна від типу таблиці статистика не збирається для стовбця '%s'"

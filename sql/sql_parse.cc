@@ -417,6 +417,7 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_SHOW_EXPLAIN]= CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_PROCESSLIST]= CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_GRANTS]=      CF_STATUS_COMMAND;
+  sql_command_flags[SQLCOM_SHOW_CREATE_USER]= CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_CREATE_DB]=   CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_CREATE]=  CF_STATUS_COMMAND;
   sql_command_flags[SQLCOM_SHOW_MASTER_STAT]= CF_STATUS_COMMAND;
@@ -438,6 +439,7 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_CREATE_USER]=       CF_CHANGES_DATA;
   sql_command_flags[SQLCOM_RENAME_USER]=       CF_CHANGES_DATA;
   sql_command_flags[SQLCOM_DROP_USER]=         CF_CHANGES_DATA;
+  sql_command_flags[SQLCOM_ALTER_USER]=        CF_CHANGES_DATA;
   sql_command_flags[SQLCOM_CREATE_ROLE]=       CF_CHANGES_DATA;
   sql_command_flags[SQLCOM_GRANT]=             CF_CHANGES_DATA;
   sql_command_flags[SQLCOM_GRANT_ROLE]=        CF_CHANGES_DATA;
@@ -494,6 +496,7 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_CHECKSUM]=  CF_REPORT_PROGRESS;
 
   sql_command_flags[SQLCOM_CREATE_USER]|=       CF_AUTO_COMMIT_TRANS;
+  sql_command_flags[SQLCOM_ALTER_USER]|=        CF_AUTO_COMMIT_TRANS;
   sql_command_flags[SQLCOM_DROP_USER]|=         CF_AUTO_COMMIT_TRANS;
   sql_command_flags[SQLCOM_RENAME_USER]|=       CF_AUTO_COMMIT_TRANS;
   sql_command_flags[SQLCOM_CREATE_ROLE]|=       CF_AUTO_COMMIT_TRANS;
@@ -587,6 +590,7 @@ void init_update_queries(void)
   sql_command_flags[SQLCOM_ALTER_EVENT]|=      CF_DISALLOW_IN_RO_TRANS;
   sql_command_flags[SQLCOM_DROP_EVENT]|=       CF_DISALLOW_IN_RO_TRANS;
   sql_command_flags[SQLCOM_CREATE_USER]|=      CF_DISALLOW_IN_RO_TRANS;
+  sql_command_flags[SQLCOM_ALTER_USER]|=       CF_DISALLOW_IN_RO_TRANS;
   sql_command_flags[SQLCOM_RENAME_USER]|=      CF_DISALLOW_IN_RO_TRANS;
   sql_command_flags[SQLCOM_DROP_USER]|=        CF_DISALLOW_IN_RO_TRANS;
   sql_command_flags[SQLCOM_CREATE_SERVER]|=    CF_DISALLOW_IN_RO_TRANS;
@@ -637,7 +641,7 @@ void execute_init_command(THD *thd, LEX_STRING *init_command,
                           mysql_rwlock_t *var_lock)
 {
   Vio* save_vio;
-  ulong save_client_capabilities;
+  ulonglong save_client_capabilities;
 
   mysql_rwlock_rdlock(var_lock);
   if (!init_command->length)
@@ -844,12 +848,13 @@ end:
   delete thd;
 
 #ifndef EMBEDDED_LIBRARY
-  thread_safe_decrement32(&thread_count);
+  DBUG_ASSERT(thread_count == 1);
   in_bootstrap= FALSE;
-
-  mysql_mutex_lock(&LOCK_thread_count);
-  mysql_cond_broadcast(&COND_thread_count);
-  mysql_mutex_unlock(&LOCK_thread_count);
+  /*
+    dec_thread_count will signal bootstrap() function that we have ended as
+    thread_count will become 0.
+  */
+  dec_thread_count();
   my_thread_end();
   pthread_exit(0);
 #endif
@@ -953,7 +958,6 @@ bool do_command(THD *thd)
   */
   if(!thd->skip_wait_timeout)
     my_net_set_read_timeout(net, thd->variables.net_wait_timeout);
-
 
   /*
     XXX: this code is here only to clear possible errors of init_connect. 
@@ -1353,6 +1357,7 @@ bool dispatch_command(enum enum_server_command command, THD *thd,
 #ifdef HAVE_REPLICATION
   case COM_REGISTER_SLAVE:
   {
+    status_var_increment(thd->status_var.com_register_slave);
     if (!register_slave(thd, (uchar*)packet, packet_length))
       my_ok(thd);
     break;
@@ -2829,7 +2834,8 @@ mysql_execute_command(THD *thd)
       thd->mdl_context.release_transactional_locks();
       if (commit_failed)
       {
-        WSREP_DEBUG("implicit commit failed, MDL released: %lu", thd->thread_id);
+        WSREP_DEBUG("implicit commit failed, MDL released: %lld",
+                    (longlong) thd->thread_id);
         goto error;
       }
     }
@@ -4516,6 +4522,11 @@ end_with_restore_list:
     db_name.str= db_name_buff;
     db_name.length= lex->name.length;
     strmov(db_name.str, lex->name.str);
+
+#ifdef WITH_WSREP
+    if (WSREP_CLIENT(thd) && wsrep_sync_wait(thd)) goto error;
+#endif /* WITH_WSREP */
+
     if (check_db_name(&db_name))
     {
       my_error(ER_WRONG_DB_NAME, MYF(0), db_name.str);
@@ -4569,6 +4580,9 @@ end_with_restore_list:
   /* lex->unit.cleanup() is called outside, no need to call it here */
   break;
   case SQLCOM_SHOW_CREATE_EVENT:
+#ifdef WITH_WSREP
+    if (WSREP_CLIENT(thd) && wsrep_sync_wait(thd)) goto error;
+#endif /* WITH_WSREP */
     res= Events::show_create_event(thd, lex->spname->m_db,
                                    lex->spname->m_name);
     break;
@@ -4628,6 +4642,7 @@ end_with_restore_list:
       my_ok(thd);
     break;
   }
+  case SQLCOM_ALTER_USER:
   case SQLCOM_RENAME_USER:
   {
     if (check_access(thd, UPDATE_ACL, "mysql", NULL, NULL, 1, 1) &&
@@ -4635,7 +4650,11 @@ end_with_restore_list:
       break;
     /* Conditionally writes to binlog */
     WSREP_TO_ISOLATION_BEGIN(WSREP_MYSQL_DB, NULL, NULL)
-    if (!(res= mysql_rename_user(thd, lex->users_list)))
+    if (lex->sql_command == SQLCOM_ALTER_USER)
+      res= mysql_alter_user(thd, lex->users_list);
+    else
+      res= mysql_rename_user(thd, lex->users_list);
+    if (!res)
       my_ok(thd);
     break;
   }
@@ -4797,16 +4816,29 @@ end_with_restore_list:
 
 #ifdef WITH_WSREP
     if (lex->type & (
-            REFRESH_GRANT            |
-            REFRESH_HOSTS            |
-            REFRESH_DES_KEY_FILE     |
+    REFRESH_GRANT                           |
+    REFRESH_HOSTS                           |
+#ifdef HAVE_OPENSSL
+    REFRESH_DES_KEY_FILE                    |
+#endif
+    /*
+      Write all flush log statements except
+      FLUSH LOGS
+      FLUSH BINARY LOGS
+      Check reload_acl_and_cache for why.
+    */
+    REFRESH_RELAY_LOG                       |
+    REFRESH_SLOW_LOG                        |
+    REFRESH_GENERAL_LOG                     |
+    REFRESH_ENGINE_LOG                      |
+    REFRESH_ERROR_LOG                       |
 #ifdef HAVE_QUERY_CACHE
-            REFRESH_QUERY_CACHE_FREE |
+    REFRESH_QUERY_CACHE_FREE                |
 #endif /* HAVE_QUERY_CACHE */
-            REFRESH_STATUS           |
-            REFRESH_USER_RESOURCES))
+    REFRESH_STATUS                          |
+    REFRESH_USER_RESOURCES))
     {
-      WSREP_TO_ISOLATION_BEGIN(WSREP_MYSQL_DB, NULL, NULL)
+      WSREP_TO_ISOLATION_BEGIN_WRTCHK(WSREP_MYSQL_DB, NULL, NULL)
     }
 #endif /* WITH_WSREP*/
 
@@ -4840,11 +4872,11 @@ end_with_restore_list:
         */
         if (first_table)
         {
-            WSREP_TO_ISOLATION_BEGIN(NULL, NULL, first_table);
+            WSREP_TO_ISOLATION_BEGIN_WRTCHK(NULL, NULL, first_table);
         }
         else
         {
-            WSREP_TO_ISOLATION_BEGIN(WSREP_MYSQL_DB, NULL, NULL);
+            WSREP_TO_ISOLATION_BEGIN_WRTCHK(WSREP_MYSQL_DB, NULL, NULL);
         }
       }
 #endif /* WITH_WSREP */
@@ -4915,6 +4947,7 @@ end_with_restore_list:
     break;
 
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
+  case SQLCOM_SHOW_CREATE_USER:
   case SQLCOM_SHOW_GRANTS:
   {
     LEX_USER *grant_user= lex->grant_user;
@@ -4931,7 +4964,10 @@ end_with_restore_list:
         grant_user->user.str == current_user_and_current_role.str ||
         !check_access(thd, SELECT_ACL, "mysql", NULL, NULL, 1, 0))
     {
-      res = mysql_show_grants(thd, grant_user);
+      if (lex->sql_command == SQLCOM_SHOW_GRANTS)
+        res = mysql_show_grants(thd, grant_user);
+      else
+        res = mysql_show_create_user(thd, grant_user);
     }
     break;
   }
@@ -4968,7 +5004,8 @@ end_with_restore_list:
     if (trans_begin(thd, lex->start_transaction_opt))
     {
       thd->mdl_context.release_transactional_locks();
-      WSREP_DEBUG("BEGIN failed, MDL released: %lu", thd->thread_id);
+      WSREP_DEBUG("BEGIN failed, MDL released: %lld",
+                  (longlong) thd->thread_id);
       goto error;
     }
     my_ok(thd);
@@ -4987,7 +5024,8 @@ end_with_restore_list:
     thd->mdl_context.release_transactional_locks();
     if (commit_failed)
     {
-      WSREP_DEBUG("COMMIT failed, MDL released: %lu", thd->thread_id);
+      WSREP_DEBUG("COMMIT failed, MDL released: %lld",
+                  (longlong) thd->thread_id);
       goto error;
     }
     /* Begin transaction with the same isolation level. */
@@ -5034,7 +5072,8 @@ end_with_restore_list:
 
     if (rollback_failed)
     {
-      WSREP_DEBUG("rollback failed, MDL released: %lu", thd->thread_id);
+      WSREP_DEBUG("rollback failed, MDL released: %lld",
+                  (longlong) thd->thread_id);
       goto error;
     }
     /* Begin transaction with the same isolation level. */
@@ -5446,12 +5485,18 @@ create_sp_error:
     }
   case SQLCOM_SHOW_CREATE_PROC:
     {
+#ifdef WITH_WSREP
+      if (WSREP_CLIENT(thd) && wsrep_sync_wait(thd)) goto error;
+#endif /* WITH_WSREP */
       if (sp_show_create_routine(thd, TYPE_ENUM_PROCEDURE, lex->spname))
         goto error;
       break;
     }
   case SQLCOM_SHOW_CREATE_FUNC:
     {
+#ifdef WITH_WSREP
+      if (WSREP_CLIENT(thd) && wsrep_sync_wait(thd)) goto error;
+#endif /* WITH_WSREP */
       if (sp_show_create_routine(thd, TYPE_ENUM_FUNCTION, lex->spname))
 	goto error;
       break;
@@ -5464,6 +5509,9 @@ create_sp_error:
       stored_procedure_type type= (lex->sql_command == SQLCOM_SHOW_PROC_CODE ?
                  TYPE_ENUM_PROCEDURE : TYPE_ENUM_FUNCTION);
 
+#ifdef WITH_WSREP
+      if (WSREP_CLIENT(thd) && wsrep_sync_wait(thd)) goto error;
+#endif /* WITH_WSREP */
       if (sp_cache_routine(thd, type, lex->spname, FALSE, &sp))
         goto error;
       if (!sp || sp->show_routine_code(thd))
@@ -5488,6 +5536,9 @@ create_sp_error:
         goto error;
       }
 
+#ifdef WITH_WSREP
+      if (WSREP_CLIENT(thd) && wsrep_sync_wait(thd)) goto error;
+#endif /* WITH_WSREP */
       if (show_create_trigger(thd, lex->spname))
         goto error; /* Error has been already logged. */
 
@@ -5548,7 +5599,8 @@ create_sp_error:
     thd->mdl_context.release_transactional_locks();
     if (commit_failed)
     {
-      WSREP_DEBUG("XA commit failed, MDL released: %lu", thd->thread_id);
+      WSREP_DEBUG("XA commit failed, MDL released: %lld",
+                  (longlong) thd->thread_id);
       goto error;
     }
     /*
@@ -5566,7 +5618,8 @@ create_sp_error:
     thd->mdl_context.release_transactional_locks();
     if (rollback_failed)
     {
-      WSREP_DEBUG("XA rollback failed, MDL released: %lu", thd->thread_id);
+      WSREP_DEBUG("XA rollback failed, MDL released: %lld",
+                  (longlong) thd->thread_id);
       goto error;
     }
     /*
@@ -5797,8 +5850,8 @@ finish:
       ! thd->in_active_multi_stmt_transaction() &&
       thd->mdl_context.has_transactional_locks())
   {
-    WSREP_DEBUG("Forcing release of transactional locks for thd %lu",
-               thd->thread_id);
+    WSREP_DEBUG("Forcing release of transactional locks for thd: %lld",
+                (longlong) thd->thread_id);
     thd->mdl_context.release_transactional_locks();
   }
 #endif /* WITH_WSREP */
@@ -7164,10 +7217,11 @@ static void wsrep_mysql_parse(THD *thd, char *rawbuf, uint length,
         }
         else
         {
-          WSREP_DEBUG("%s, thd: %lu is_AC: %d, retry: %lu - %lu SQL: %s", 
+          WSREP_DEBUG("%s, thd: %lld is_AC: %d, retry: %lu - %lu SQL: %s", 
                       (thd->wsrep_conflict_state == ABORTED) ? 
                       "BF Aborted" : "cert failure",
-                      thd->thread_id, is_autocommit, thd->wsrep_retry_counter, 
+                      (longlong) thd->thread_id, is_autocommit,
+                      thd->wsrep_retry_counter, 
                       thd->variables.wsrep_retry_autocommit, thd->query());
           my_error(ER_LOCK_DEADLOCK, MYF(0), "wsrep aborted transaction");
           thd->killed= NOT_KILLED;
@@ -7278,7 +7332,6 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
             and Query_log_event::print() would give ';;' output).
             This also helps display only the current query in SHOW
             PROCESSLIST.
-            Note that we don't need LOCK_thread_count to modify query_length.
           */
           if (found_semicolon && (ulong) (found_semicolon - thd->query()))
             thd->set_query_inner(thd->query(),
@@ -7332,6 +7385,12 @@ void mysql_parse(THD *thd, char *rawbuf, uint length,
                              sql_statement_info[SQLCOM_SELECT].m_key);
     status_var_increment(thd->status_var.com_stat[SQLCOM_SELECT]);
     thd->update_stats();
+#ifdef WITH_WSREP
+    if (WSREP_CLIENT(thd))
+    {
+      thd->wsrep_sync_wait_gtid= WSREP_GTID_UNDEFINED;
+    }
+#endif /* WITH_WSREP */
   }
   DBUG_VOID_RETURN;
 }
@@ -8942,9 +9001,7 @@ void get_default_definer(THD *thd, LEX_USER *definer, bool role)
   }
   definer->user.length= strlen(definer->user.str);
 
-  definer->password= null_lex_str;
-  definer->plugin= empty_lex_str;
-  definer->auth= empty_lex_str;
+  definer->reset_auth();
 }
 
 
@@ -9002,7 +9059,7 @@ LEX_USER *create_definer(THD *thd, LEX_STRING *user_name, LEX_STRING *host_name)
 
   definer->user= *user_name;
   definer->host= *host_name;
-  definer->password= null_lex_str;
+  definer->reset_auth();
 
   return definer;
 }

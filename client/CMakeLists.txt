@@ -39,7 +39,7 @@ COPY_OPENSSL_DLLS(copy_openssl_client)
 
 IF(WITH_LIBMARIADB)
   ADD_DEFINITIONS(-DHAVE_LIBMARIADB=1)
-  SET(CLIENT_LIB mariadbclient mysys)
+  SET(CLIENT_LIB ${CONNECTOR_C_LIBS} mysys)
 ELSE()
   SET(CLIENT_LIB mysqlclient)
 ENDIF()
@@ -102,8 +102,9 @@ TARGET_LINK_LIBRARIES(async_example ${CLIENT_LIB})
 SET_TARGET_PROPERTIES (mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysqlslap mysql_plugin async_example
 PROPERTIES HAS_CXX TRUE)
 
-FOREACH(t mysqladmin mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysqlslap mysql_plugin async_example)
-  ADD_DEPENDENCIES(${t} GenError ${CLIENT_LIB})
+FOREACH(t mysql mysqltest mysqltest mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysql_plugin mysqlbinlog
+  mysqladmin mysqlslap)
+  ADD_DEPENDENCIES(${t} GenError mariadb_connector_c)
 ENDFOREACH()
 
 ADD_DEFINITIONS(-DHAVE_DLOPEN)
