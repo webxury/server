@@ -7,9 +7,11 @@ if (ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
   set(ICONV_FIND_QUIETLY TRUE)
 endif (ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
 
-# On Mac we need to check for iconv in macports first, the default
-# iconv library redefines symbols, so we will get external dependency
-# errors.
+
+IF(CMAKE_SYSTEM_NAME MATCHES "SunOS")
+  # There is some libiconv.so in  /usr/local that must
+  # be avoided, iconv routines are in libc  
+  find_library(ICONV_LIBRARIES NAMES c)
 IF(APPLE)
   find_path(ICONV_INCLUDE_DIR iconv.h PATHS
             /opt/local/include/
