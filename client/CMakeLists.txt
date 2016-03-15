@@ -103,7 +103,7 @@ SET_TARGET_PROPERTIES (mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow 
 PROPERTIES HAS_CXX TRUE)
 
 FOREACH(t mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysqlslap mysql_plugin async_example)
-  ADD_DEPENDENCIES(${t} GenError)
+  ADD_DEPENDENCIES(${t} GenError ${CLIENT_LIB})
 ENDFOREACH()
 
 ADD_DEFINITIONS(-DHAVE_DLOPEN)
