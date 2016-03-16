@@ -12,7 +12,7 @@ IF(CMAKE_SYSTEM_NAME MATCHES "SunOS")
   # There is some libiconv.so in  /usr/local that must
   # be avoided, iconv routines are in libc  
   find_library(ICONV_LIBRARIES NAMES c)
-IF(APPLE)
+ELSEIF(APPLE)
   find_path(ICONV_INCLUDE_DIR iconv.h PATHS
             /opt/local/include/
             /usr/include/
