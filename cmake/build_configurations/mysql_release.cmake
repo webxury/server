@@ -117,6 +117,8 @@ IF(WIN32)
     # Sign executables with authenticode certificate
     SET(SIGNCODE 1 CACHE BOOL "")
   ENDIF()
+  SET(WITH_THIRD_PARTY HeidiSQL CACHE STRING "")
+  SET(WITH_UNIT_TESTS 0 CACHE STRING "")
 ENDIF()
 
 IF(UNIX)
