@@ -48,6 +48,7 @@ class ACL_internal_schema_access;
 class ACL_internal_table_access;
 class Field;
 class Table_statistics;
+class With_element;
 class TDC_element;
 
 /*
@@ -489,9 +490,6 @@ typedef enum enum_table_category TABLE_CATEGORY;
 TABLE_CATEGORY get_table_category(const LEX_STRING *db,
                                   const LEX_STRING *name);
 
-
-struct TABLE_share;
-struct All_share_tables;
 
 typedef struct st_table_field_type
 {
@@ -1008,7 +1006,7 @@ private:
      One should use methods of I_P_List template instead.
   */
   TABLE *share_all_next, **share_all_prev;
-  friend struct All_share_tables;
+  friend class TDC_element;
 
 public:
 
@@ -1405,19 +1403,6 @@ struct TABLE_share
   static inline TABLE ***prev_ptr(TABLE *l)
   {
     return (TABLE ***) &l->prev;
-  }
-};
-
-
-struct All_share_tables
-{
-  static inline TABLE **next_ptr(TABLE *l)
-  {
-    return &l->share_all_next;
-  }
-  static inline TABLE ***prev_ptr(TABLE *l)
-  {
-    return &l->share_all_prev;
   }
 };
 
@@ -1840,6 +1825,7 @@ struct TABLE_LIST
      derived tables. Use TABLE_LIST::is_anonymous_derived_table().
   */
   st_select_lex_unit *derived;		/* SELECT_LEX_UNIT of derived table */
+  With_element *with;                   /* With element of with_table */
   ST_SCHEMA_TABLE *schema_table;        /* Information_schema table */
   st_select_lex	*schema_select_lex;
   /*
@@ -2204,6 +2190,7 @@ struct TABLE_LIST
   {
     return (derived_type & DTYPE_TABLE);
   }
+  bool is_with_table();
   inline void set_view()
   {
     derived_type= DTYPE_VIEW;
@@ -2244,6 +2231,7 @@ struct TABLE_LIST
   {
     derived_type|= DTYPE_MULTITABLE;
   }
+  bool set_as_with_table(THD *thd, With_element *with_elem);
   void reset_const_table();
   bool handle_derived(LEX *lex, uint phases);
 
