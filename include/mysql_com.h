@@ -102,7 +102,9 @@ enum enum_server_command
   COM_STMT_PREPARE, COM_STMT_EXECUTE, COM_STMT_SEND_LONG_DATA, COM_STMT_CLOSE,
   COM_STMT_RESET, COM_SET_OPTION, COM_STMT_FETCH, COM_DAEMON,
   /* don't forget to update const char *command_name[] in sql_parse.cc */
-
+  COM_MDB_GAP_BEG,
+  COM_MDB_GAP_END=253,
+  COM_MULTI,
   /* Must be last */
   COM_END
 };
@@ -233,6 +235,8 @@ enum enum_server_command
 #define MARIADB_CLIENT_FLAGS_MASK 0xffffffff00000000ULL
 /* Client support progress indicator */
 #define MARIADB_CLIENT_PROGRESS (1ULL << 32)
+/* support COM_MULTI */
+#define MARIADB_CLIENT_COM_MULTI (1ULL << 33)
 
 #ifdef HAVE_COMPRESS
 #define CAN_CLIENT_COMPRESS CLIENT_COMPRESS
@@ -269,7 +273,8 @@ enum enum_server_command
                            MARIADB_CLIENT_PROGRESS | \
                            CLIENT_PLUGIN_AUTH | \
                            CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA | \
-                           CLIENT_CONNECT_ATTRS)
+                           CLIENT_CONNECT_ATTRS |\
+                           MARIADB_CLIENT_COM_MULTI)
 
 /*
   To be added later:
