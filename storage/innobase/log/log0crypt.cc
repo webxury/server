@@ -237,11 +237,13 @@ init_crypt_key(
 	rc = encryption_key_get(LOG_DEFAULT_ENCRYPTION_KEY, info->key_version, mysqld_key, &keylen);
 
 	if (rc) {
-		ib_logf(IB_LOG_LEVEL_ERROR,
-			"Redo log crypto: getting mysqld crypto key "
-			"from key version failed err = %u. Reason could be that requested"
-			" key_version %u is not found or required encryption "
-			" key management is not found.", rc, info->key_version);
+		ib::error()
+			<< "Redo log crypto: getting mysqld crypto key "
+			<< "from key version failed err = " << rc
+			<< " Reason could be that requested key_version "
+			<< info->key_version
+			<< "is not found or required encryption "
+			<< " key management is not found.";
 		return false;
 	}
 
@@ -339,18 +341,18 @@ log_crypt_set_ver_and_key(
 		memset(info.crypt_nonce, 0, sizeof(info.crypt_nonce));
 	} else {
 		if (my_random_bytes(info.crypt_msg, MY_AES_BLOCK_SIZE) != MY_AES_OK) {
-			ib_logf(IB_LOG_LEVEL_ERROR,
-				"Redo log crypto: generate "
-				"%u-byte random number as crypto msg failed.",
-				MY_AES_BLOCK_SIZE);
+			ib::error()
+				<< "Redo log crypto: generate "
+				<< MY_AES_BLOCK_SIZE
+				<< "-byte random number as crypto msg failed.";
 			ut_error;
 		}
 
 		if (my_random_bytes(info.crypt_nonce, MY_AES_BLOCK_SIZE) != MY_AES_OK) {
-			ib_logf(IB_LOG_LEVEL_ERROR,
-				"Redo log crypto: generate "
-				"%u-byte random number as AES_CTR nonce failed.",
-				MY_AES_BLOCK_SIZE);
+			ib::error()
+				<< "Redo log crypto: generate "
+				<< MY_AES_BLOCK_SIZE
+				<< "-byte random number as AES_CTR nonce failed.";
 			ut_error;
 		}
 
@@ -586,19 +588,19 @@ log_crypt_print_error(
 {
 	switch(err_info) {
 	case LOG_CRYPT_KEY_NOT_FOUND:
-		ib_logf(IB_LOG_LEVEL_ERROR,
-			"Redo log crypto: getting mysqld crypto key "
-			"from key version failed. Reason could be that "
-			"requested key version is not found or required "
-			"encryption key management plugin is not found.");
+		ib::error()
+			<< "Redo log crypto: getting mysqld crypto key "
+			<< "from key version failed. Reason could be that "
+			<< "requested key version is not found or required "
+			<< "encryption key management plugin is not found.";
 		break;
 	case LOG_DECRYPT_MAYBE_FAILED:
-		ib_logf(IB_LOG_LEVEL_ERROR,
-			"Redo log crypto: failed to decrypt log block. "
-			"Reason could be that requested key version is "
-			"not found, required encryption key management "
-			"plugin is not found or configured encryption "
-			"algorithm and/or method does not match.");
+		ib::error()
+			<< "Redo log crypto: failed to decrypt log block. "
+			<< "Reason could be that requested key version is "
+			<< "not found, required encryption key management "
+			<< "plugin is not found or configured encryption "
+			<< "algorithm and/or method does not match.";
 		break;
 	default:
 		ut_error; /* Real bug */
