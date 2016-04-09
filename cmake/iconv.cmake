@@ -14,13 +14,13 @@ IF(CMAKE_SYSTEM_NAME MATCHES "SunOS")
   find_library(ICONV_LIBRARIES NAMES c)
 ELSEIF(APPLE)
   find_path(ICONV_INCLUDE_DIR iconv.h PATHS
-            /opt/local/include/
             /usr/include/
-            NO_CMAKE_SYSTEM_PATH)
+            /opt/local/include/
+  )
   find_library(ICONV_LIBRARIES NAMES iconv libiconv PATHS
-               /opt/local/lib/
                /usr/lib/
-               NO_CMAKE_SYSTEM_PATH)
+               /opt/local/lib/
+  )
   SET(ICONV_EXTERNAL TRUE)
 ELSE()
   find_path(ICONV_INCLUDE_DIR iconv.h)
