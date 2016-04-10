@@ -4175,7 +4175,6 @@ SJ_TMP_TABLE::create_sj_weedout_tmp_table(THD *thd)
                                               field->null_ptr,
                                               field->null_bit)))
 	  goto err;
-        key_part_info->key_part_flag|= HA_END_SPACE_ARE_EQUAL; //todo need this?
       }
       keyinfo->key_length+=  key_part_info->length;
     }
@@ -4739,8 +4738,6 @@ int clear_sj_tmp_tables(JOIN *join)
   {
     if ((res= table->file->ha_delete_all_rows()))
       return res; /* purecov: inspected */
-   free_io_cache(table);
-   filesort_free_buffers(table,0);
   }
 
   SJ_MATERIALIZATION_INFO *sjm;

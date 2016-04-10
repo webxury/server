@@ -39,7 +39,6 @@
 #include "tztime.h"                             // struct Time_zone
 #include "sql_acl.h"     // TABLE_ACLS, check_grant, DB_ACLS, acl_get,
                          // check_grant_db
-#include "filesort.h"    // filesort_free_buffers
 #include "sp.h"
 #include "sp_head.h"
 #include "sp_pcontext.h"
@@ -2352,7 +2351,8 @@ static int show_create_view(THD *thd, TABLE_LIST *table, String *buff)
     We can't just use table->query, because our SQL_MODE may trigger
     a different syntax, like when ANSI_QUOTES is defined.
   */
-  table->view->unit.print(buff, QT_ORDINARY);
+  table->view->unit.print(buff, enum_query_type(QT_ORDINARY |
+                                                QT_ITEM_ORIGINAL_FUNC_NULLIF));
 
   if (table->with_check != VIEW_CHECK_NONE)
   {
@@ -3524,7 +3524,7 @@ bool get_lookup_value(THD *thd, Item_func *item_func,
     /* Lookup value is database name */
     if (!cs->coll->strnncollsp(cs, (uchar *) field_name1, strlen(field_name1),
                                (uchar *) item_field->field_name,
-                               strlen(item_field->field_name), 0))
+                               strlen(item_field->field_name)))
     {
       thd->make_lex_string(&lookup_field_vals->db_value,
                            tmp_str->ptr(), tmp_str->length());
@@ -3533,7 +3533,7 @@ bool get_lookup_value(THD *thd, Item_func *item_func,
     else if (!cs->coll->strnncollsp(cs, (uchar *) field_name2,
                                     strlen(field_name2),
                                     (uchar *) item_field->field_name,
-                                    strlen(item_field->field_name), 0))
+                                    strlen(item_field->field_name)))
     {
       thd->make_lex_string(&lookup_field_vals->table_value,
                            tmp_str->ptr(), tmp_str->length());
@@ -3619,10 +3619,10 @@ bool uses_only_table_name_fields(Item *item, TABLE_LIST *table)
     if (table->table != item_field->field->table ||
         (cs->coll->strnncollsp(cs, (uchar *) field_name1, strlen(field_name1),
                                (uchar *) item_field->field_name,
-                               strlen(item_field->field_name), 0) &&
+                               strlen(item_field->field_name)) &&
          cs->coll->strnncollsp(cs, (uchar *) field_name2, strlen(field_name2),
                                (uchar *) item_field->field_name,
-                               strlen(item_field->field_name), 0)))
+                               strlen(item_field->field_name))))
       return 0;
   }
   else if (item->type() == Item::REF_ITEM)
@@ -4343,7 +4343,7 @@ uint get_table_open_method(TABLE_LIST *tables,
 
    @retval FALSE  No error, if lock was obtained TABLE_LIST::mdl_request::ticket
                   is set to non-NULL value.
-   @retval TRUE   Some error occured (probably thread was killed).
+   @retval TRUE   Some error occurred (probably thread was killed).
 */
 
 static bool
@@ -4451,7 +4451,7 @@ static int fill_schema_table_from_frm(THD *thd, TABLE_LIST *tables,
   if (try_acquire_high_prio_shared_mdl_lock(thd, &table_list, can_deadlock))
   {
     /*
-      Some error occured (most probably we have been killed while
+      Some error occurred (most probably we have been killed while
       waiting for conflicting locks to go away), let the caller to
       handle the situation.
     */
@@ -5062,7 +5062,10 @@ static int get_schema_tables_record(THD *thd, TABLE_LIST *tables,
                                   HA_STATUS_TIME |
                                   HA_STATUS_VARIABLE_EXTRA |
                                   HA_STATUS_AUTO)) != 0)
+      {
+        file->print_error(info_error, MYF(0));
         goto err;
+      }
 
       enum row_type row_type = file->get_row_type();
       switch (row_type) {
@@ -8066,8 +8069,6 @@ bool get_schema_tables_result(JOIN *join,
         table_list->table->file->extra(HA_EXTRA_NO_CACHE);
         table_list->table->file->extra(HA_EXTRA_RESET_STATE);
         table_list->table->file->ha_delete_all_rows();
-        free_io_cache(table_list->table);
-        filesort_free_buffers(table_list->table,1);
         table_list->table->null_row= 0;
       }
       else

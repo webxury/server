@@ -363,6 +363,7 @@ static bool volatile select_thread_in_use, signal_thread_in_use;
 static volatile bool ready_to_exit;
 static my_bool opt_debugging= 0, opt_external_locking= 0, opt_console= 0;
 static my_bool opt_short_log_format= 0, opt_silent_startup= 0;
+
 uint kill_cached_threads;
 static uint wake_thread;
 ulong max_used_connections;
@@ -389,6 +390,7 @@ static DYNAMIC_ARRAY all_options;
 
 bool opt_bin_log, opt_bin_log_used=0, opt_ignore_builtin_innodb= 0;
 my_bool opt_log, debug_assert_if_crashed_table= 0, opt_help= 0;
+my_bool debug_assert_on_not_freed_memory= 0;
 my_bool disable_log_notes;
 static my_bool opt_abort;
 ulonglong log_output_options;
@@ -2232,13 +2234,12 @@ void clean_up(bool print_message)
 
   if (print_message && my_default_lc_messages && server_start_time)
     sql_print_information(ER_DEFAULT(ER_SHUTDOWN_COMPLETE),my_progname);
-  cleanup_errmsgs();
   MYSQL_CALLBACK(thread_scheduler, end, ());
   thread_scheduler= 0;
   mysql_library_end();
   finish_client_errs();
-  (void) my_error_unregister(ER_ERROR_FIRST, ER_ERROR_LAST); // finish server errs
-  DBUG_PRINT("quit", ("Error messages freed"));
+  cleanup_errmsgs();
+  free_error_messages();
   /* Tell main we are ready */
   logger.cleanup_end();
   sys_var_end();
@@ -2993,6 +2994,7 @@ void unlink_thd(THD *thd)
 
 static bool cache_thread()
 {
+  struct timespec abstime;
   DBUG_ENTER("cache_thread");
 
   mysql_mutex_lock(&LOCK_thread_cache);
@@ -3011,8 +3013,26 @@ static bool cache_thread()
     PSI_THREAD_CALL(delete_current_thread)();
 #endif
 
+#ifndef DBUG_OFF
+    while (_db_is_pushed_())
+      _db_pop_();
+#endif
+
+    set_timespec(abstime, THREAD_CACHE_TIMEOUT);
     while (!abort_loop && ! wake_thread && ! kill_cached_threads)
-      mysql_cond_wait(&COND_thread_cache, &LOCK_thread_cache);
+    {
+      int error= mysql_cond_timedwait(&COND_thread_cache, &LOCK_thread_cache,
+                                       &abstime);
+      if (error == ETIMEDOUT || error == ETIME)
+      {
+        /*
+          If timeout, end thread.
+          If a new thread is requested (wake_thread is set), we will handle
+          the call, even if we got a timeout (as we are already awake and free)
+        */
+        break;
+      }
+    }
     cached_thread_count--;
     if (kill_cached_threads)
       mysql_cond_signal(&COND_flush_thread_cache);
@@ -3839,7 +3859,6 @@ SHOW_VAR com_status_vars[]= {
   {"checksum",             STMT_STATUS(SQLCOM_CHECKSUM)},
   {"commit",               STMT_STATUS(SQLCOM_COMMIT)},
   {"compound_sql",         STMT_STATUS(SQLCOM_COMPOUND)},
-  {"com_multi",            COM_STATUS(com_multi)},
   {"create_db",            STMT_STATUS(SQLCOM_CREATE_DB)},
   {"create_event",         STMT_STATUS(SQLCOM_CREATE_EVENT)},
   {"create_function",      STMT_STATUS(SQLCOM_CREATE_SPFUNCTION)},
@@ -3885,6 +3904,7 @@ SHOW_VAR com_status_vars[]= {
   {"kill",                 STMT_STATUS(SQLCOM_KILL)},
   {"load",                 STMT_STATUS(SQLCOM_LOAD)},
   {"lock_tables",          STMT_STATUS(SQLCOM_LOCK_TABLES)},
+  {"multi",                COM_STATUS(com_multi)},
   {"optimize",             STMT_STATUS(SQLCOM_OPTIMIZE)},
   {"preload_keys",         STMT_STATUS(SQLCOM_PRELOAD_KEYS)},
   {"prepare_sql",          STMT_STATUS(SQLCOM_PREPARE)},
@@ -4085,7 +4105,8 @@ static void my_malloc_size_cb_func(long long size, my_bool is_thread_specific)
                             (longlong) thd->status_var.local_memory_used,
                             size));
         thd->status_var.local_memory_used+= size;
-        DBUG_ASSERT((longlong) thd->status_var.local_memory_used >= 0);
+        DBUG_ASSERT((longlong) thd->status_var.local_memory_used >= 0 ||
+                    !debug_assert_on_not_freed_memory);
       }
     }
   }
@@ -5990,6 +6011,8 @@ int mysqld_main(int argc, char **argv)
                          mysqld_port,
                          MYSQL_COMPILATION_COMMENT);
 
+  sql_print_information(ER_DEFAULT(ER_EXTRA_TEST));  // QQ
+
   // try to keep fd=0 busy
   if (!freopen(IF_WIN("NUL","/dev/null"), "r", stdin))
   {
@@ -6050,7 +6073,7 @@ int mysqld_main(int argc, char **argv)
       CloseHandle(hEventShutdown);
   }
 #endif
-#if defined(HAVE_OPENSSL) && !defined(EMBEDDED_LIBRARY)
+#if (defined(HAVE_OPENSSL) && !defined(HAVE_YASSL)) && !defined(EMBEDDED_LIBRARY)
   ERR_remove_state(0);
 #endif
   mysqld_exit(0);
@@ -7298,6 +7321,13 @@ struct my_option my_long_options[]=
    &opt_sporadic_binlog_dump_fail, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0,
    0},
 #endif /* HAVE_REPLICATION */
+#ifndef DBUG_OFF
+  {"debug-assert-on-not-freed-memory", 0,
+   "Assert if we found problems with memory allocation",
+   &debug_assert_on_not_freed_memory,
+   &debug_assert_on_not_freed_memory, 0, GET_BOOL, NO_ARG, 1, 0, 0, 0, 0,
+   0},
+#endif /* DBUG_OFF */
   /* default-storage-engine should have "MyISAM" as def_value. Instead
      of initializing it here it is done in init_common_variables() due
      to a compiler bug in Sun Studio compiler. */
@@ -7394,14 +7424,6 @@ struct my_option my_long_options[]=
    "Don't log extra information to update and slow-query logs.",
    &opt_short_log_format, &opt_short_log_format,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
-  {"log-slow-admin-statements", 0,
-   "Log slow OPTIMIZE, ANALYZE, ALTER and other administrative statements to "
-   "the slow log if it is open.", &opt_log_slow_admin_statements,
-   &opt_log_slow_admin_statements, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
- {"log-slow-slave-statements", 0,
-  "Log slow statements executed by slave thread to the slow log if it is open.",
-  &opt_log_slow_slave_statements, &opt_log_slow_slave_statements,
-  0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {"log-tc", 0,
    "Path to transaction coordinator log (used for transactions that affect "
    "more than one storage engine, when binary log is disabled).",

@@ -30,7 +30,7 @@
 #include "sql_table.h"                   // build_table_filename
 #include "sql_parse.h"                          // check_stack_overrun
 #include "sql_acl.h"            // SUPER_ACL
-#include "sql_base.h"           // free_io_cache
+#include "sql_base.h"           // TDC_element
 #include "discover.h"           // extension_based_table_discovery, etc
 #include "log_event.h"          // *_rows_log_event
 #include "create_options.h"
@@ -295,7 +295,7 @@ handler *get_ha_partition(partition_info *part_info)
 static const char **handler_errmsgs;
 
 C_MODE_START
-static const char **get_handler_errmsgs()
+static const char **get_handler_errmsgs(int nr)
 {
   return handler_errmsgs;
 }
@@ -324,7 +324,7 @@ int ha_init_errors(void)
   /* Set the dedicated error messages. */
   SETMSG(HA_ERR_KEY_NOT_FOUND,          ER_DEFAULT(ER_KEY_NOT_FOUND));
   SETMSG(HA_ERR_FOUND_DUPP_KEY,         ER_DEFAULT(ER_DUP_KEY));
-  SETMSG(HA_ERR_RECORD_CHANGED,         "Update wich is recoverable");
+  SETMSG(HA_ERR_RECORD_CHANGED,         "Update which is recoverable");
   SETMSG(HA_ERR_WRONG_INDEX,            "Wrong index given to function");
   SETMSG(HA_ERR_CRASHED,                ER_DEFAULT(ER_NOT_KEYFILE));
   SETMSG(HA_ERR_WRONG_IN_RECORD,        ER_DEFAULT(ER_CRASHED_ON_USAGE));
@@ -386,12 +386,10 @@ int ha_init_errors(void)
 */
 static int ha_finish_errors(void)
 {
-  const char    **errmsgs;
-
   /* Allocate a pointer array for the error message strings. */
-  if (! (errmsgs= my_error_unregister(HA_ERR_FIRST, HA_ERR_LAST)))
-    return 1;
-  my_free(errmsgs);
+  my_error_unregister(HA_ERR_FIRST, HA_ERR_LAST);
+  my_free(handler_errmsgs);
+  handler_errmsgs= 0;
   return 0;
 }
 
@@ -3079,6 +3077,7 @@ int handler::update_auto_increment()
   if (unlikely(nr == ULONGLONG_MAX))
       DBUG_RETURN(HA_ERR_AUTOINC_ERANGE);
 
+  DBUG_ASSERT(nr != 0);
   DBUG_PRINT("info",("auto_increment: %llu  nb_reserved_values: %llu",
                      nr, append ? nb_reserved_values : 0));
 
@@ -5863,8 +5862,6 @@ int handler::ha_reset()
   DBUG_ASSERT(table->key_read == 0);
   /* ensure that ha_index_end / ha_rnd_end has been called */
   DBUG_ASSERT(inited == NONE);
-  /* Free cache used by filesort */
-  free_io_cache(table);
   /* reset the bitmaps to point to defaults */
   table->default_column_bitmaps();
   pushed_cond= NULL;

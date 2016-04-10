@@ -127,7 +127,7 @@ static my_bool parsing_disabled= 0;
 static my_bool display_result_vertically= FALSE, display_result_lower= FALSE,
   display_metadata= FALSE, display_result_sorted= FALSE;
 static my_bool disable_query_log= 0, disable_result_log= 0;
-static my_bool disable_connect_log= 1;
+static my_bool disable_connect_log= 0;
 static my_bool disable_warnings= 0, disable_column_names= 0;
 static my_bool prepare_warnings_enabled= 0;
 static my_bool disable_info= 1;
@@ -707,7 +707,7 @@ public:
     DBUG_ASSERT(ds->str);
 
 #ifdef EXTRA_DEBUG
-    DBUG_PRINT("QQ", ("str: %*s", (int) ds->length, ds->str));
+    DBUG_PRINT("extra", ("str: %*s", (int) ds->length, ds->str));
 #endif
 
     if (fwrite(ds->str, 1, ds->length, m_file) != ds->length)
@@ -1108,7 +1108,7 @@ void do_eval(DYNAMIC_STRING *query_eval, const char *query,
   Run query and dump the result to stderr in vertical format
 
   NOTE! This function should be safe to call when an error
-  has occured and thus any further errors will be ignored(although logged)
+  has occurred and thus any further errors will be ignored (although logged)
 
   SYNOPSIS
   show_query
@@ -1174,7 +1174,7 @@ static void show_query(MYSQL* mysql, const char* query)
   is added to the warning stack, only print @@warning_count-1 warnings.
 
   NOTE! This function should be safe to call when an error
-  has occured and this any further errors will be ignored(although logged)
+  has occurred and this any further errors will be ignored(although logged)
 
   SYNOPSIS
   show_warnings_before_error
@@ -4704,7 +4704,7 @@ void do_sync_with_master2(struct st_command *command, long offset,
         master_pos_wait returned NULL. This indicates that
         slave SQL thread is not started, the slave's master
         information is not initialized, the arguments are
-        incorrect, or an error has occured
+        incorrect, or an error has occurred
       */
       die("%.*s failed: '%s' returned NULL "          \
           "indicating slave SQL thread failure",

@@ -11809,10 +11809,10 @@ static void test_bug5315()
   rc= mysql_stmt_prepare(stmt, stmt_text, strlen(stmt_text));
   DIE_UNLESS(rc == 0);
   if (!opt_silent)
-    printf("Excuting mysql_change_user\n");
+    printf("Executing mysql_change_user\n");
   mysql_change_user(mysql, opt_user, opt_password, current_db);
   if (!opt_silent)
-    printf("Excuting mysql_stmt_execute\n");
+    printf("Executing mysql_stmt_execute\n");
   rc= mysql_stmt_execute(stmt);
   DIE_UNLESS(rc != 0);
   if (rc)
@@ -11822,10 +11822,10 @@ static void test_bug5315()
   }
   /* check that connection is OK */
   if (!opt_silent)
-    printf("Excuting mysql_stmt_close\n");
+    printf("Executing mysql_stmt_close\n");
   mysql_stmt_close(stmt);
   if (!opt_silent)
-    printf("Excuting mysql_stmt_init\n");
+    printf("Executing mysql_stmt_init\n");
   stmt= mysql_stmt_init(mysql);
   rc= mysql_stmt_prepare(stmt, stmt_text, strlen(stmt_text));
   DIE_UNLESS(rc == 0);
@@ -16259,7 +16259,6 @@ static void test_change_user()
   const char *db= "mysqltest_user_test_database";
   int rc;
   MYSQL*       conn;
-
   DBUG_ENTER("test_change_user");
   myheader("test_change_user");
 
@@ -16270,6 +16269,9 @@ static void test_change_user()
 
   sprintf(buff, "create database %s", db);
   rc= mysql_query(mysql, buff);
+  myquery(rc);
+
+  rc= mysql_query(mysql, "SET SQL_MODE=''");
   myquery(rc);
 
   sprintf(buff,
@@ -17513,7 +17515,6 @@ static void test_wl4166_2()
   mysql_stmt_close(stmt);
   rc= mysql_query(mysql, "drop table t1");
   myquery(rc);
-
 }
 
 

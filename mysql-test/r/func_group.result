@@ -2220,11 +2220,15 @@ INSERT INTO `t1` (b) VALUES ('2013-07-06 23:59:59');
 EXPLAIN SELECT MIN(b) FROM t1 WHERE b <= '2013-11-06 23:59:59';
 id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
 1	SIMPLE	NULL	NULL	NULL	NULL	NULL	NULL	NULL	Select tables optimized away
+connect  con1,localhost,root,,;
+connection con1;
 set names utf8;
 # Should be the same as above:
 EXPLAIN SELECT MIN(b) FROM t1 WHERE b <= '2013-11-06 23:59:59';
 id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
 1	SIMPLE	NULL	NULL	NULL	NULL	NULL	NULL	NULL	Select tables optimized away
+connection default;
+disconnect con1;
 DROP TABLE t1;
 CREATE TABLE `t1` (
 `a` int(11) NOT NULL AUTO_INCREMENT,
@@ -2296,6 +2300,15 @@ SELECT id, AVG(a) AS avg, CAST(AVG(a) AS SIGNED) AS cast_avg FROM t1 GROUP BY id
 id	avg	cast_avg
 1	9223372036854775807.0000	9223372036854775807
 2	9223372036854775807.0000	9223372036854775807
+DROP TABLE t1;
+#
+# MDEV-9656 Assertion `0' failed in Item_sum_field::get_tmp_table_field()
+#
+CREATE TABLE t1 (i INT);
+INSERT INTO t1 VALUES (1),(2);
+SELECT DISTINCT VAR_POP(1) FROM t1 GROUP BY @a := 's';
+VAR_POP(1)
+0.0000
 DROP TABLE t1;
 #
 # MDEV-8921 Wrong result for CAST(AVG(double_column) AS SIGNED)

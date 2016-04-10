@@ -705,7 +705,7 @@ do_retry:
   thd->clear_error();
 
   /*
-    If we retry due to a deadlock kill that occured during the commit step, we
+    If we retry due to a deadlock kill that occurred during the commit step, we
     might have already updated (but not committed) an update of table
     mysql.gtid_slave_pos, and cleared the gtid_pending flag. Now we have
     rolled back any such update, so we must set the gtid_pending flag back to
@@ -987,7 +987,6 @@ handle_rpl_parallel_thread(void *arg)
   thd->client_capabilities = CLIENT_LOCAL_FILES;
   thd->net.reading_or_writing= 0;
   thd_proc_info(thd, "Waiting for work from main SQL threads");
-  thd->set_time();
   thd->variables.lock_wait_timeout= LONG_TIMEOUT;
   thd->system_thread_info.rpl_sql_info= &sql_info;
   /*
@@ -1126,7 +1125,7 @@ handle_rpl_parallel_thread(void *arg)
         /*
           Register ourself to wait for the previous commit, if we need to do
           such registration _and_ that previous commit has not already
-          occured.
+          occurred.
         */
         register_wait_for_prior_event_group_commit(rgi, entry);
 
@@ -1187,7 +1186,7 @@ handle_rpl_parallel_thread(void *arg)
       {
         /*
           Do an extra check for (deadlock) kill here. This helps prevent a
-          lingering deadlock kill that occured during normal DML processing to
+          lingering deadlock kill that occurred during normal DML processing to
           propagate past the mark_start_commit(). If we detect a deadlock only
           after mark_start_commit(), we have to unmark, which has at least a
           theoretical possibility of leaving a window where it looks like all

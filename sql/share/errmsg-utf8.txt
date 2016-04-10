@@ -6034,7 +6034,7 @@ ER_EVENT_CANNOT_ALTER_IN_THE_PAST
   eng "Event execution time is in the past and ON COMPLETION NOT PRESERVE is set. The event was not changed. Specify a time in the future."
   ger "Execution Zeitpunkt des Ereignisses in der Vergangenheit liegt, und es war NACH ABSCHLUSS Set nicht erhalten. Die Veranstaltung wurde nicht verändert. Geben Sie einen Zeitpunkt in der Zukunft."
 ER_SLAVE_INCIDENT
-  eng "The incident %s occured on the master. Message: %-.64s"
+  eng "The incident %s occurred on the master. Message: %-.64s"
   ger "Der Vorfall %s passierte auf dem Master. Meldung: %-.64s"
 ER_NO_PARTITION_FOR_GIVEN_VALUE_SILENT
   eng "Table has no partition for some existing values"
@@ -7154,3 +7154,20 @@ ER_WRONG_ORDER_IN_WITH_CLAUSE
         eng "The definition of the table '%s' refers to the table '%s' defined later in a non-recursive WITH clause"
 ER_RECURSIVE_QUERY_IN_WITH_CLAUSE
         eng "Recursive queries in WITH clause are not supported yet"
+
+#
+# Internal errors, not used
+#
+skip-to-error-number 2000
+
+# MySQL 5.7 error numbers starts here
+skip-to-error-number 3000
+
+ER_MYSQL_57_TEST
+        eng "5.7 test"
+
+# MariaDB extra error numbers starts from 4000
+skip-to-error-number 4000
+
+ER_EXTRA_TEST
+        eng "10.2 test"

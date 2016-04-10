@@ -655,7 +655,7 @@ insert into t1 values (1);
 flush tables;
 # Open t2 and (implicitly) t1.
 select * from t2;
-# Truncate t1, wich was not recognized as open without the bugfix.
+# Truncate t1, which was not recognized as open without the bugfix.
 # After fix for Bug#8306 and before fix for Bug#26379,
 # it should fail with a table-in-use error message, otherwise succeed.
 truncate table t1;
@@ -2585,7 +2585,6 @@ DROP TABLE t1, t2, t3, t4, m1, m2;
 --disable_warnings
 DROP TABLE IF EXISTS t1, t2, t3;
 --enable_warnings
---echo # Connection con1.
 connect (con1,localhost,root,,);
 CREATE TABLE t1 (c1 int);
 CREATE TABLE t2 (c1 int);
@@ -2594,12 +2593,10 @@ START TRANSACTION;
 --error ER_ILLEGAL_HA
 HANDLER t3 OPEN;
 DROP TABLE t1, t2, t3;
---echo # Connection default.
 connection default;
---echo # Disconnecting con1, all mdl_tickets must have been released.
+--echo # all mdl_tickets must have been released.
 disconnect con1;
 --echo # The bug-specific case.
---echo # Connection con1.
 connect (con1,localhost,root,,);
 CREATE TABLE t1 (c1 int);
 CREATE TABLE t2 (c1 int);
@@ -2609,9 +2606,8 @@ START TRANSACTION;
 --error ER_WRONG_MRG_TABLE
 HANDLER t3 OPEN;
 DROP TABLE t1, t3;
---echo # Connection default.
 connection default;
---echo # Disconnecting con1, all mdl_tickets must have been released.
+--echo # all mdl_tickets must have been released.
 disconnect con1;
 
 --echo #

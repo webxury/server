@@ -1,6 +1,13 @@
+<<<<<<< HEAD
 SELECT (VARIABLE_VALUE <> '') AS have_ssl FROM INFORMATION_SCHEMA.SESSION_STATUS WHERE VARIABLE_NAME='Ssl_cipher';
 have_ssl
 1
+=======
+connect  ssl_compress_con,localhost,root,,,,,SSL COMPRESS;
+SHOW STATUS LIKE 'Ssl_cipher';
+Variable_name	Value
+Ssl_cipher	DHE-RSA-AES256-SHA
+>>>>>>> 10.2
 SHOW STATUS LIKE 'Compression';
 Variable_name	Value
 Compression	ON
@@ -2166,3 +2173,5 @@ have_ssl
 SHOW STATUS LIKE 'Compression';
 Variable_name	Value
 Compression	ON
+connection default;
+disconnect ssl_compress_con;
