@@ -1,3 +1,4 @@
+connect  ssl_con,localhost,root,,,,,SSL;
 SELECT (VARIABLE_VALUE <> '') AS have_ssl FROM INFORMATION_SCHEMA.SESSION_STATUS WHERE VARIABLE_NAME='Ssl_cipher';
 have_ssl
 1
@@ -2172,3 +2173,5 @@ NULL
 select 'still connected?';
 still connected?
 still connected?
+connection default;
+disconnect ssl_con;
