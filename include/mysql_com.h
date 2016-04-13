@@ -237,6 +237,8 @@ enum enum_server_command
 #define MARIADB_CLIENT_PROGRESS (1ULL << 32)
 /* support COM_MULTI */
 #define MARIADB_CLIENT_COM_MULTI (1ULL << 33)
+/* support bundle first command with the authentication packet */
+#define MARIADB_CLIENT_COM_IN_AUTH (1ULL << 34)
 
 #ifdef HAVE_COMPRESS
 #define CAN_CLIENT_COMPRESS CLIENT_COMPRESS
@@ -274,7 +276,8 @@ enum enum_server_command
                            CLIENT_PLUGIN_AUTH | \
                            CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA | \
                            CLIENT_CONNECT_ATTRS |\
-                           MARIADB_CLIENT_COM_MULTI)
+                           MARIADB_CLIENT_COM_MULTI |\
+                           MARIADB_CLIENT_COM_IN_AUTH)
 
 /*
   To be added later:

@@ -1081,6 +1081,8 @@ THD::THD(bool is_wsrep_applier)
   prepare_derived_at_open= FALSE;
   create_tmp_table_for_derived= FALSE;
   save_prep_leaf_list= FALSE;
+  bundle_command.str= NULL;
+  bundle_command.length= 0;
   /* Restore THR_THD */
   set_current_thd(old_THR_THD);
 }
@@ -1462,6 +1464,8 @@ void THD::init(void)
   debug_sync_init_thread(this);
 #endif /* defined(ENABLED_DEBUG_SYNC) */
   apc_target.init(&LOCK_thd_data);
+  bundle_command.str= NULL;
+  bundle_command.length= 0;
   DBUG_VOID_RETURN;
 }
 
@@ -1568,6 +1572,13 @@ void THD::cleanup(void)
 {
   DBUG_ENTER("THD::cleanup");
   DBUG_ASSERT(cleanup_done == 0);
+
+  if (bundle_command.str)
+  {
+    my_free(bundle_command.str);
+    bundle_command.str= 0;
+    bundle_command.length= 0;
+  }
 
   killed= KILL_CONNECTION;
 #ifdef ENABLE_WHEN_BINLOG_WILL_BE_ABLE_TO_PREPARE

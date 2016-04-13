@@ -23,6 +23,7 @@
 #include <sql_audit.h>
 #include <debug_sync.h>
 #include <threadpool.h>
+#include "sql_parse.h"
 
 
 /* Threadpool parameters */
@@ -40,7 +41,6 @@ TP_STATISTICS tp_stats;
 
 
 extern "C" pthread_key(struct st_my_thread_var*, THR_KEY_mysys);
-extern bool do_command(THD*);
 
 /*
   Worker threads contexts, and THD contexts.
@@ -180,6 +180,20 @@ THD* threadpool_add_connection(CONNECT *connect, void *scheduler_data)
       }
     }
   }
+  if (thd && thd->bundle_command.str)
+  {
+    thd->bundle_command.str[thd->bundle_command.length]= '\0'; /* safety */
+    enum enum_server_command command=
+      fetch_command(thd, thd->bundle_command.str);
+
+    /* it is not a real error, just QUIT */
+    error= dispatch_command(command, thd, thd->bundle_command.str + 1,
+                                 (uint) (thd->bundle_command.length - 1),
+                                 FALSE, FALSE);
+    net_flush(&thd->net);
+    mysql_audit_release(thd);
+  }
+
   if (error)
   {
     threadpool_remove_connection(thd);
