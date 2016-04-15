@@ -7156,7 +7156,6 @@ ER_WRONG_ORDER_IN_WITH_CLAUSE
         eng "The definition of the table '%s' refers to the table '%s' defined later in a non-recursive WITH clause"
 ER_RECURSIVE_QUERY_IN_WITH_CLAUSE
         eng "Recursive queries in WITH clause are not supported yet"
-
 #
 # Internal errors, not used
 #
@@ -7167,6 +7166,10 @@ skip-to-error-number 3000
 
 ER_MYSQL_57_TEST
         eng "5.7 test"
+
+ER_NET_OK_PACKET_TOO_LARGE 08S01
+        eng "OK packet too large"
+        ukr "Пакет OK надто великий"
 
 # MariaDB extra error numbers starts from 4000
 skip-to-error-number 4000

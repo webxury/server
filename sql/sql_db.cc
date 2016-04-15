@@ -1034,7 +1034,10 @@ exit:
     it to 0.
   */
   if (thd->db && cmp_db_names(thd->db, db) && !error)
+  {
     mysql_change_db_impl(thd, NULL, 0, thd->variables.collation_server);
+    thd->session_tracker.mark_as_changed(thd, CURRENT_SCHEMA_TRACKER, NULL);
+  }
   my_dirend(dirp);
   DBUG_RETURN(error);
 }
@@ -1458,7 +1461,7 @@ bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name, bool force_switch)
 
       mysql_change_db_impl(thd, NULL, 0, thd->variables.collation_server);
 
-      DBUG_RETURN(FALSE);
+      goto done;
     }
     else
     {
@@ -1475,8 +1478,7 @@ bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name, bool force_switch)
 
     mysql_change_db_impl(thd, &INFORMATION_SCHEMA_NAME, SELECT_ACL,
                          system_charset_info);
-
-    DBUG_RETURN(FALSE);
+    goto done;
   }
 
   /*
@@ -1563,8 +1565,7 @@ bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name, bool force_switch)
       mysql_change_db_impl(thd, NULL, 0, thd->variables.collation_server);
 
       /* The operation succeed. */
-
-      DBUG_RETURN(FALSE);
+      goto done;
     }
     else
     {
@@ -1588,6 +1589,9 @@ bool mysql_change_db(THD *thd, const LEX_STRING *new_db_name, bool force_switch)
 
   mysql_change_db_impl(thd, &new_db_file_name, db_access, db_default_cl);
 
+done:
+  thd->session_tracker.mark_as_changed(thd, CURRENT_SCHEMA_TRACKER, NULL);
+  thd->session_tracker.mark_as_changed(thd, SESSION_STATE_CHANGE_TRACKER, NULL);
   DBUG_RETURN(FALSE);
 }
 

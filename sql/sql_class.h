@@ -45,6 +45,7 @@
 #include <mysql/psi/mysql_idle.h>
 #include <mysql/psi/mysql_table.h>
 #include <mysql_com_server.h>
+#include "session_tracker.h"
 
 extern "C"
 void set_thd_stage_info(void *thd,
@@ -681,6 +682,8 @@ typedef struct system_variables
 
   my_bool pseudo_slave_mode;
 
+  my_bool session_track_schema;
+  my_bool session_track_state_change;
 } SV;
 
 /**
@@ -3935,6 +3938,10 @@ private:
    */
   LEX_STRING invoker_user;
   LEX_STRING invoker_host;
+
+public:
+  Session_tracker session_tracker;
+private:
 
   /* Protect against add/delete of temporary tables in parallel replication */
   void rgi_lock_temporary_tables();
