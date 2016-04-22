@@ -30,7 +30,13 @@ grant select, update on test.* to mysqltest_1@localhost;
 create user mysqltest_3@localhost;
 create user mysqltest_3;
 
-
+#
+# Added below replace to avoid
+# MDEV-8487: mysql-test - main.information_schema 'xtradb' fails
+#  when server  built with -DDEFAULT_CHARSET=utf8
+#  -DDEFAULT_COLLATION=utf8_general_ci
+#
+--replace_column 3 latin1 4 latin1_swedish_ci
 select * from information_schema.SCHEMATA where schema_name > 'm';
 select schema_name from information_schema.schemata;
 show databases like 't%';
