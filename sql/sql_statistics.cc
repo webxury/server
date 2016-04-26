@@ -29,6 +29,7 @@
 #include "sql_statistics.h"
 #include "opt_range.h"
 #include "my_atomic.h"
+#include "sql_show.h"
 
 /*
   The system variable 'use_stat_tables' can take one of the
@@ -3193,6 +3194,9 @@ int delete_statistics_for_table(THD *thd, LEX_STRING *db, LEX_STRING *tab)
       rc= 1;
   }
 
+  if (!rc)
+    rc= del_global_table_stat(thd, db, tab);
+
   thd->restore_stmt_binlog_format(save_binlog_format);
 
   close_system_tables(thd, &open_tables_backup);
@@ -3338,6 +3342,9 @@ int delete_statistics_for_index(THD *thd, TABLE *tab, KEY *key_info,
       }
     }
   }
+
+  if (!rc)
+    rc= del_global_index_stat(thd, tab, key_info);
 
   thd->restore_stmt_binlog_format(save_binlog_format);
 
