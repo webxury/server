@@ -752,11 +752,12 @@ retry:
   tables->table= table;                         // This is used by fix_fields
   table->pos_in_table_list= tables;
 
-  if (handler->lock->lock_count > 0)
+  if (handler->lock->table_count > 0)
   {
     int lock_error;
 
-    handler->lock->locks[0]->type= handler->lock->locks[0]->org_type;
+    if (handler->lock->lock_count > 0)
+      handler->lock->locks[0]->type= handler->lock->locks[0]->org_type;
 
     /* save open_tables state */
     TABLE* backup_open_tables= thd->open_tables;

@@ -86,9 +86,10 @@ SET DEBUG_SYNC= 'RESET';
 --echo #
 --echo # Coverage test for non pruned ha_partition::store_lock()
 --echo #
-CREATE TABLE t1 (a int) ENGINE = InnoDB;
+--echo # Use MyISAM tables as InnoDB no longer relies on THR_LOCK locks.
+CREATE TABLE t1 (a int) ENGINE = MyISAM;
 CREATE TABLE t2 (a int PRIMARY KEY)
-ENGINE = InnoDB PARTITION BY HASH (a) PARTITIONS 3;
+ENGINE = MyISAM PARTITION BY HASH (a) PARTITIONS 3;
 
 HANDLER t1 OPEN;
 
