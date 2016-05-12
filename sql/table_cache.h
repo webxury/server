@@ -105,6 +105,9 @@ public:
   }
 
 
+  void remove_all_unused_tables(TABLE_list *purge_tables, bool mark_flushed);
+
+
   /**
     Get last element of free_tables.
   */
