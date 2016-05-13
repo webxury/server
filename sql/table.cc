@@ -3931,6 +3931,7 @@ bool TABLE_SHARE::visit_subgraph(Wait_for_flush *wait_for_flush,
   */
   mysql_mutex_lock(&tdc->LOCK_table_share);
   tdc->all_tables_refs++;
+  DBUG_ASSERT(tdc->flushed);
   mysql_mutex_unlock(&tdc->LOCK_table_share);
 
   TDC_element::All_share_tables_list::Iterator tables_it(tdc->all_tables);
@@ -3951,8 +3952,8 @@ bool TABLE_SHARE::visit_subgraph(Wait_for_flush *wait_for_flush,
 
   while ((table= tables_it++))
   {
-    DBUG_ASSERT(table->in_use && tdc->flushed);
-    if (gvisitor->inspect_edge(&table->in_use->mdl_context))
+    THD *thd= my_atomic_loadptr_explicit(&table->in_use, MY_MEMORY_ORDER_RELAXED);
+    if (thd && gvisitor->inspect_edge(&thd->mdl_context))
     {
       goto end_leave_node;
     }
@@ -3961,8 +3962,8 @@ bool TABLE_SHARE::visit_subgraph(Wait_for_flush *wait_for_flush,
   tables_it.rewind();
   while ((table= tables_it++))
   {
-    DBUG_ASSERT(table->in_use && tdc->flushed);
-    if (table->in_use->mdl_context.visit_subgraph(gvisitor))
+    THD *thd= my_atomic_loadptr_explicit(&table->in_use, MY_MEMORY_ORDER_RELAXED);
+    if (thd && thd->mdl_context.visit_subgraph(gvisitor))
     {
       goto end_leave_node;
     }

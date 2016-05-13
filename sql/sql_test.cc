@@ -85,7 +85,7 @@ static my_bool print_cached_tables_callback(TDC_element *element,
   TDC_element::All_share_tables_list::Iterator it(element->all_tables);
   while ((entry= it++))
   {
-    THD *in_use= entry->in_use;
+    THD *in_use= my_atomic_loadptr_explicit(&entry->in_use, MY_MEMORY_ORDER_RELAXED);
     printf("%-14.14s %-32s%6ld%8ld%6d  %s\n",
            entry->s->db.str, entry->s->table_name.str, element->version,
            in_use ? (long) in_use->thread_id : (long) 0,

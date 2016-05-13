@@ -343,6 +343,8 @@ bool tc_release_table(TABLE *table)
   DBUG_ASSERT(table->in_use);
   DBUG_ASSERT(table->file);
 
+  my_atomic_storeptr_explicit(&table->in_use, 0, MY_MEMORY_ORDER_RELAXED);
+
   if (table->needs_reopen() || tc_records() > tc_size)
   {
     mysql_mutex_lock(&table->s->tdc->LOCK_table_share);
@@ -354,13 +356,6 @@ bool tc_release_table(TABLE *table)
   mysql_mutex_lock(&table->s->tdc->LOCK_table_share);
   if (table->s->tdc->flushed)
     goto purge;
-  /*
-    in_use doesn't really need mutex protection, but must be reset after
-    checking tdc.flushed and before this table appears in free_tables.
-    Resetting in_use is needed only for print_cached_tables() and
-    list_open_tables().
-  */
-  table->in_use= 0;
   /* Add table to the list of unused TABLE objects for this share. */
   table->s->tdc->free_tables.push_front(table);
   mysql_mutex_unlock(&table->s->tdc->LOCK_table_share);
@@ -369,7 +364,6 @@ bool tc_release_table(TABLE *table)
 purge:
   tc_remove_table(table);
   mysql_mutex_unlock(&table->s->tdc->LOCK_table_share);
-  table->in_use= 0;
   intern_close_table(table);
   return true;
 }

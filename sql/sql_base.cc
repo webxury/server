@@ -307,7 +307,7 @@ static my_bool list_open_tables_callback(TDC_element *element,
   TDC_element::All_share_tables_list::Iterator it(element->all_tables);
   TABLE *table;
   while ((table= it++))
-    if (table->in_use)
+    if (my_atomic_loadptr_explicit(&table->in_use, MY_MEMORY_ORDER_RELAXED))
       ++(*arg->start_list)->in_use;
   mysql_mutex_unlock(&element->LOCK_table_share);
   (*arg->start_list)->locked= 0;                   /* Obsolete. */
@@ -373,16 +373,16 @@ void kill_delayed_threads_for_table(TDC_element *element)
   TABLE *tab;
 
   mysql_mutex_assert_owner(&element->LOCK_table_share);
+  DBUG_ASSERT(element->flushed);
 
   if (!delayed_insert_threads)
     return;
 
   while ((tab= it++))
   {
-    THD *in_use= tab->in_use;
+    THD *in_use= my_atomic_loadptr_explicit(&tab->in_use, MY_MEMORY_ORDER_RELAXED);
 
-    DBUG_ASSERT(in_use && tab->s->tdc->flushed);
-    if ((in_use->system_thread & SYSTEM_THREAD_DELAYED_INSERT) &&
+    if (in_use && (in_use->system_thread & SYSTEM_THREAD_DELAYED_INSERT) &&
         ! in_use->killed)
     {
       in_use->killed= KILL_SYSTEM_THREAD;

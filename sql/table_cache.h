@@ -91,16 +91,17 @@ public:
 
     mysql_mutex_lock(&LOCK_table_share);
     table= free_tables.pop_front();
+    mysql_mutex_unlock(&LOCK_table_share);
+
     if (table)
     {
       DBUG_ASSERT(!table->in_use);
-      table->in_use= thd;
+      my_atomic_storeptr_explicit(&table->in_use, thd, MY_MEMORY_ORDER_RELAXED);
       /* The ex-unused table must be fully functional. */
       DBUG_ASSERT(table->db_stat && table->file);
       /* The children must be detached from the table. */
       DBUG_ASSERT(!table->file->extra(HA_EXTRA_IS_ATTACHED_CHILDREN));
     }
-    mysql_mutex_unlock(&LOCK_table_share);
     return table;
   }
 
