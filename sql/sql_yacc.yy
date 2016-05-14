@@ -1793,7 +1793,6 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         opt_default_time_precision
         case_stmt_body opt_bin_mod
         opt_if_exists_table_element opt_if_not_exists_table_element
-        opt_into opt_procedure_clause
 	opt_recursive
 
 %type <object_ddl_options>
@@ -1920,7 +1919,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %type <variable> internal_variable_name
 
 %type <select_lex> subselect
-        get_select_lex query_specification 
+        get_select_lex query_term
         query_expression_body
 
 %type <boolfunc2creator> comp_op
@@ -8519,9 +8518,8 @@ select:
           }
         ;
 
-/* Need select_init2 for subselects. */
 select_init:
-          SELECT_SYM select_init2
+          SELECT_SYM select_options_and_item_list select_init3
         | '(' select_paren ')' union_opt
         ;
 
@@ -8533,7 +8531,8 @@ select_paren:
             */
             Lex->current_select->set_braces(true);
           }
-          SELECT_SYM select_part2
+          SELECT_SYM select_options_and_item_list select_part3
+          opt_select_lock_type
           {
             if (setup_select_in_parentheses(Lex))
               MYSQL_YYABORT;
@@ -8558,49 +8557,39 @@ select_paren_derived:
         | '(' select_paren_derived ')'
         ;
 
-select_init2:
-          select_part2
+select_init3:
+          opt_table_expression
+          opt_select_lock_type
           {
-            LEX *lex= Lex;
             /* Parentheses carry no meaning here */
-            lex->current_select->set_braces(false);
+            Lex->current_select->set_braces(false);
           }
           union_clause
+        | select_part3_union_not_ready
+          opt_select_lock_type
+          {
+            /* Parentheses carry no meaning here */
+            Lex->current_select->set_braces(false);
+          }
+        ;
+
+
+select_part3:
+          opt_table_expression
+        | select_part3_union_not_ready
         ;
 
 /*
-  Theoretically we can merge all 3 right hand sides of the select_part2
-  rule into one, however such a transformation adds one shift/reduce
-  conflict more.
+  The SELECT parts after select_item_list that cannot be followed by UNION.
 */
-select_part2:
-          select_options_and_item_list
-          opt_order_clause
-          opt_limit_clause
-          opt_select_lock_type
-        | select_options_and_item_list into opt_select_lock_type
-        | select_options_and_item_list
-          opt_into
-          table_expression
-          opt_order_clause
-          opt_limit_clause
-          opt_procedure_clause
-          opt_into
-          opt_select_lock_type
-          {
-            if ($2 && $7)
-            {
-              /* double "INTO" clause */
-              my_error(ER_WRONG_USAGE, MYF(0), "INTO", "INTO");
-              MYSQL_YYABORT;
-            }
-            if ($6 && ($2 || $7))
-            {
-              /* "INTO" with "PROCEDURE ANALYSE" */
-              my_error(ER_WRONG_USAGE, MYF(0), "PROCEDURE", "INTO");
-              MYSQL_YYABORT;
-            }
-          }
+select_part3_union_not_ready:
+          order_or_limit
+        | into opt_table_expression opt_order_clause opt_limit_clause
+        | table_expression into
+        | table_expression procedure_clause
+        | table_expression order_or_limit
+        | table_expression order_or_limit into
+        | table_expression order_or_limit procedure_clause
         ;
 
 select_options_and_item_list:
@@ -11123,14 +11112,7 @@ select_derived_union:
               MYSQL_YYABORT;
             }
           }
-        | select_derived_union
-          UNION_SYM
-          union_option
-          {
-            if (add_select_to_union_list(Lex, (bool)$3, FALSE))
-              MYSQL_YYABORT;
-          }
-          query_specification
+        | select_derived_union union_head_non_top query_term
           {
             /*
               Remove from the name resolution context stack the context of the
@@ -11946,9 +11928,8 @@ choice:
 	| DEFAULT { $$= HA_CHOICE_UNDEF; }
 	;
 
-opt_procedure_clause:
-          /* empty */ { $$= false; }
-        | PROCEDURE_SYM ident /* Procedure name */
+procedure_clause:
+          PROCEDURE_SYM ident /* Procedure name */
           {
             LEX *lex=Lex;
 
@@ -11989,7 +11970,6 @@ opt_procedure_clause:
           {
             /* Subqueries are allowed from now.*/
             Lex->expr_allows_subselect= true;
-            $$= true;
           }
         ;
 
@@ -12067,11 +12047,6 @@ select_outvar:
                                           Lex->sphead)) :
                                 NULL;
           }
-        ;
-
-opt_into:
-          /* empty */ { $$= false; }
-        | into        { $$= true; }
         ;
 
 into:
@@ -16367,13 +16342,24 @@ order_or_limit:
         | limit_clause
         ;
 
+/*
+  Start a UNION, for non-top level query expressions.
+*/
+union_head_non_top:
+          UNION_SYM union_option
+          {
+            if (add_select_to_union_list(Lex, (bool)$2, FALSE))
+              MYSQL_YYABORT;
+          }
+        ;
+
 union_option:
           /* empty */ { $$=1; }
         | DISTINCT  { $$=1; }
         | ALL       { $$=0; }
         ;
 
-query_specification:
+query_term:
           SELECT_SYM select_init2_derived
           opt_table_expression
           opt_order_clause
@@ -16390,14 +16376,8 @@ query_specification:
         ;
 
 query_expression_body:
-          query_specification
-        | query_expression_body
-          UNION_SYM union_option 
-          {
-            if (add_select_to_union_list(Lex, (bool)$3, FALSE))
-              MYSQL_YYABORT;
-          }
-          query_specification
+          query_term
+        | query_expression_body union_head_non_top query_term
           {
             Lex->pop_context();
             $$= $1;
@@ -16653,7 +16633,7 @@ view_select:
         ;
 
 view_select_aux:
-          SELECT_SYM select_init2
+          SELECT_SYM select_options_and_item_list select_init3
         | '(' select_paren ')' union_opt
         ;
 
