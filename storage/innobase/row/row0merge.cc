@@ -3219,7 +3219,6 @@ row_merge_sort(
 	merge_file_t*		file,
 	row_merge_block_t*	block,
 	int*			tmpfd,
-	ut_stage_alter_t*	stage /* = NULL */,
 	const bool		update_progress,
 					/*!< in: update progress
 					status variable or not */
@@ -3229,7 +3228,8 @@ row_merge_sort(
 	const float		pct_cost, /*!< in: current progress percent */
 	fil_space_crypt_t*	crypt_data,/*!< in: table crypt data */
 	row_merge_block_t*	crypt_block, /*!< in: crypt buf or NULL */
-	ulint			space)	   /*!< in: space id */
+	ulint			space,	   /*!< in: space id */
+	ut_stage_alter_t* stage)
 {
 	const ulint	half	= file->offset / 2;
 	ulint		num_runs;
@@ -3370,7 +3370,7 @@ row_merge_copy_blobs(
 				&len, field_data, page_size, field_len, heap);
 		} else {
 			data = btr_rec_copy_externally_stored_field(
-				mrec, offsets, page_size, i, &len, heap, NULL);
+				mrec, offsets, page_size, i, &len, heap);
 		}
 
 		/* Because we have locked the table, any records
@@ -4936,9 +4936,9 @@ wait_again:
 
 			error = row_merge_sort(
 					trx, &dup, &merge_files[i],
-					block, &tmpfd, stage,
+					block, &tmpfd, true,
 					pct_progress, pct_cost,
-					crypt_data, crypt_block, new_table->space);
+					crypt_data, crypt_block, new_table->space, stage);
 
 			pct_progress += pct_cost;
 

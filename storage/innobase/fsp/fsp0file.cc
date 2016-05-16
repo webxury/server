@@ -32,6 +32,7 @@ Created 2013-7-26 by Kevin Lewis
 #include "page0page.h"
 #include "srv0start.h"
 #include "ut0new.h"
+#include "fil0crypt.h"
 
 /** Initialize the name and flags of this datafile.
 @param[in]	name	tablespace name, will be copied
@@ -58,6 +59,10 @@ Datafile::shutdown()
 	m_name = NULL;
 
 	free_filepath();
+
+	if (m_crypt_info) {
+		fil_space_destroy_crypt_data(&m_crypt_info);
+	}
 
 	free_first_page();
 }
@@ -352,6 +357,10 @@ Datafile::read_first_page(bool read_only_mode)
 
 		m_space_id = fsp_header_get_space_id(m_first_page);
 	}
+
+	const page_size_t page_sz = fsp_header_get_page_size(m_first_page);
+	ulint offset = fsp_header_get_crypt_offset(page_sz, NULL);
+	m_crypt_info = fil_space_read_crypt_data(m_space_id, m_first_page, offset);
 
 	return(err);
 }
@@ -998,7 +1007,7 @@ RemoteDatafile::create_link_file(
 
 	file = os_file_create_simple_no_error_handling(
 		innodb_data_file_key, link_filepath,
-		OS_FILE_CREATE, OS_FILE_READ_WRITE,
+		OS_FILE_CREATE, OS_FILE_READ_WRITE_CACHED,
 		srv_read_only_mode, &success);
 
 	if (!success) {

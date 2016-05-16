@@ -792,8 +792,9 @@ fts_parallel_tokenization(
 
 	ut_ad(psort_info->psort_common->trx->mysql_thd != NULL);
 
-	const char*		path = thd_innodb_tmpdir(
+	/* const char*		path = thd_innodb_tmpdir(
 		psort_info->psort_common->trx->mysql_thd);
+	*/
 
 	ut_ad(psort_info);
 

@@ -1126,6 +1126,17 @@ std::string
 lock_get_info(
 	const lock_t*);
 
+/*************************************************************//**
+Updates the lock table when a page is split and merged to
+two pages. */
+UNIV_INTERN
+void
+lock_update_split_and_merge(
+	const buf_block_t* left_block,	/*!< in: left page to which merged */
+	const rec_t* orig_pred,		/*!< in: original predecessor of
+					supremum on the left page before merge*/
+	const buf_block_t* right_block);/*!< in: right page from which merged */
+
 #endif /* WITH_WSREP */
 #ifndef UNIV_NONINL
 #include "lock0lock.ic"

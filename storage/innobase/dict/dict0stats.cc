@@ -3901,10 +3901,11 @@ dict_stats_save_defrag_stats(
 
 	lint	now = (lint) ut_time();
 	mtr_t	mtr;
-	ulint	n_leaf_pages;
-	ulint	n_leaf_reserved;
+	ulint	n_leaf_pages=0;
+	ulint	n_leaf_reserved=0;
 	mtr_start(&mtr);
 	mtr_s_lock(dict_index_get_lock(index), &mtr);
+
 	n_leaf_reserved = btr_get_size_and_reserved(index, BTR_N_LEAF_PAGES,
 						    &n_leaf_pages, &mtr);
 	mtr_commit(&mtr);

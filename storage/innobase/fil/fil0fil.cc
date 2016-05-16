@@ -1218,7 +1218,8 @@ fil_space_create(
 	const char*	name,
 	ulint		id,
 	ulint		flags,
-	fil_type_t	purpose)
+	fil_type_t	purpose,
+	fil_space_crypt_t* crypt_data)	/*!< in: crypt data */
 {
 	fil_space_t*	space;
 
@@ -1297,6 +1298,8 @@ fil_space_create(
 
 		fil_system->max_assigned_id = id;
 	}
+
+	space->crypt_data = crypt_data;
 
 	mutex_exit(&fil_system->mutex);
 
@@ -3342,7 +3345,9 @@ fil_ibd_create(
 	const char*	name,
 	const char*	path,
 	ulint		flags,
-	ulint		size)
+	ulint		size,
+	fil_encryption_t mode,	/*!< in: encryption mode */
+	ulint		key_id) /*!< in: encryption key_id */
 {
 	os_file_t	file;
 	dberr_t		err;
@@ -3353,7 +3358,8 @@ fil_ibd_create(
 	bool		has_data_dir = FSP_FLAGS_HAS_DATA_DIR(flags);
 	bool		has_shared_space = FSP_FLAGS_GET_SHARED(flags);
 	fil_space_t*	space = NULL;
-
+	fil_space_crypt_t *crypt_data = NULL;
+ 
 	ut_ad(!is_system_tablespace(space_id));
 	ut_ad(!srv_read_only_mode);
 	ut_a(space_id < SRV_LOG_SPACE_FIRST_ID);
@@ -3570,8 +3576,15 @@ fil_ibd_create(
 		}
 	}
 
+	/* Create crypt data if the tablespace is either encrypted or user has
+	requested it to remain unencrypted. */
+	if (mode == FIL_SPACE_ENCRYPTION_ON || mode == FIL_SPACE_ENCRYPTION_OFF ||
+		srv_encrypt_tables) {
+		crypt_data = fil_space_create_crypt_data(mode, key_id);
+	}
+
 	space = fil_space_create(name, space_id, flags, is_temp
-				 ? FIL_TYPE_TEMPORARY : FIL_TYPE_TABLESPACE);
+				 ? FIL_TYPE_TEMPORARY : FIL_TYPE_TABLESPACE, crypt_data);
 
 	if (!fil_node_create_low(
 			path, size, space, false, punch_hole, atomic_write)) {
@@ -3649,7 +3662,8 @@ fil_ibd_open(
 	ulint		id,
 	ulint		flags,
 	const char*	space_name,
-	const char*	path_in)
+	const char*	path_in,
+	dict_table_t* table)
 {
 	dberr_t		err = DB_SUCCESS;
 	bool		dict_filepath_same_as_default = false;
@@ -3709,6 +3723,10 @@ fil_ibd_open(
 		validate = true;
 		++tablespaces_found;
 		link_file_found = true;
+		if (table) {
+			table->crypt_data = df_remote.get_crypt_info();
+		}
+
 	} else if (df_remote.filepath() != NULL) {
 		/* An ISL file was found but contained a bad filepath in it.
 		Better validate anything we do find. */
@@ -3728,6 +3746,10 @@ fil_ibd_open(
 			if (df_dict.open_read_only(true) == DB_SUCCESS) {
 				ut_ad(df_dict.is_open());
 				++tablespaces_found;
+
+				if (table) {
+					table->crypt_data = df_dict.get_crypt_info();
+				}
 			}
 		}
 	}
@@ -3739,6 +3761,10 @@ fil_ibd_open(
 	if (df_default.open_read_only(strict) == DB_SUCCESS) {
 		ut_ad(df_default.is_open());
 		++tablespaces_found;
+		if (table) {
+			table->crypt_data = df_default.get_crypt_info();
+		}
+
 	}
 
 	/* Check if multiple locations point to the same file. */
@@ -3948,7 +3974,10 @@ fil_ibd_open(
 skip_validate:
 	if (err == DB_SUCCESS) {
 		fil_space_t*	space = fil_space_create(
-			space_name, id, flags, purpose);
+		      space_name, id, flags, purpose,
+			    df_remote.is_open() ? df_remote.get_crypt_info() :
+			    df_dict.is_open() ? df_dict.get_crypt_info() :
+			    df_default.get_crypt_info());
 
 		/* We do not measure the size of the file, that is why
 		we pass the 0 below */
@@ -4401,7 +4430,8 @@ fil_ibd_load(
 	bool is_temp = FSP_FLAGS_GET_TEMPORARY(file.flags());
 	space = fil_space_create(
 		file.name(), space_id, file.flags(),
-		is_temp ? FIL_TYPE_TEMPORARY : FIL_TYPE_TABLESPACE);
+		is_temp ? FIL_TYPE_TEMPORARY : FIL_TYPE_TABLESPACE,
+		file.get_crypt_info());
 
 	if (space == NULL) {
 		return(FIL_LOAD_INVALID);
@@ -5210,7 +5240,8 @@ fil_io(
 	ulint			byte_offset,
 	ulint			len,
 	void*			buf,
-	void*			message)
+	void*			message,
+	ulint*			write_size)
 {
 	os_offset_t		offset;
 	IORequest		req_type(type);
@@ -7306,4 +7337,44 @@ fil_space_get_block_size(
 	mutex_exit(&fil_system->mutex);
 
 	return block_size;
+}
+
+/*******************************************************************//**
+Returns the table space by a given id, NULL if not found. */
+fil_space_t*
+fil_space_found_by_id(
+/*==================*/
+	ulint	id)	/*!< in: space id */
+{
+	fil_space_t* space = NULL;
+	mutex_enter(&fil_system->mutex);
+	space = fil_space_get_by_id(id);
+
+	/* Not found if space is being deleted */
+	if (space && space->stop_new_ops) {
+		space = NULL;
+	}
+
+	mutex_exit(&fil_system->mutex);
+	return space;
+}
+
+/****************************************************************//**
+Acquire fil_system mutex */
+void
+fil_system_enter(void)
+/*==================*/
+{
+	ut_ad(!mutex_own(&fil_system->mutex));
+	mutex_enter(&fil_system->mutex);
+}
+
+/****************************************************************//**
+Release fil_system mutex */
+void
+fil_system_exit(void)
+/*=================*/
+{
+	ut_ad(mutex_own(&fil_system->mutex));
+	mutex_exit(&fil_system->mutex);
 }

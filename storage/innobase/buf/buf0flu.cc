@@ -1925,6 +1925,21 @@ buf_flush_start(
 }
 
 /******************************************************************//**
+Gather the aggregated stats for both flush list and LRU list flushing */
+void
+buf_flush_common(
+/*=============*/
+	buf_flush_t	flush_type,	/*!< in: type of flush */
+	ulint		page_count)	/*!< in: number of pages flushed */
+{
+	buf_dblwr_flush_buffered_writes();
+
+	ut_a(flush_type == BUF_FLUSH_LRU || flush_type == BUF_FLUSH_LIST);
+
+	srv_stats.buf_pool_flushed.add(page_count);
+}
+
+/******************************************************************//**
 End a buffer flush batch for LRU or flush list */
 void
 buf_flush_end(

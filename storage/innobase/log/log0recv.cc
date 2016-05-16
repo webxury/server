@@ -1128,7 +1128,7 @@ recv_read_checkpoint_info_for_backup(
 block.
 @param[in]	log block
 @return whether the checksum matches */
-bool
+ibool
 log_block_checksum_is_ok(
 	const byte*	block,	/*!< in: pointer to a log block */
 	bool            print_err) /*!< in print error ? */

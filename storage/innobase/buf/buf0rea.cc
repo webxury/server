@@ -180,9 +180,15 @@ buf_read_page_low(
 
 	IORequest	request(type | IORequest::READ);
 
+	ut_ad(dst != NULL);
+	ut_ad(bpage->zip.data != NULL || ((buf_block_t*)bpage)->frame != NULL);
+	
 	*err = fil_io(
 		request, sync, page_id, page_size, 0, page_size.physical(),
 		dst, bpage, NULL);
+
+	ut_ad(dst != NULL);
+	ut_ad(bpage->zip.data != NULL || ((buf_block_t*)bpage)->frame != NULL);
 
 	if (sync) {
 		thd_wait_end(NULL);
@@ -211,6 +217,8 @@ buf_read_page_low(
 	}
 
 	if (sync) {
+	ut_ad(dst != NULL);
+	ut_ad(bpage->zip.data != NULL || ((buf_block_t*)bpage)->frame != NULL);
 		/* The i/o is already completed when we arrive from
 		fil_read */
 		if (!buf_page_io_complete(bpage)) {

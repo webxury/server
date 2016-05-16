@@ -34,10 +34,6 @@ this program; if not, write to the Free Software Foundation, Inc.,
 *****************************************************************************/
 
 /** @file ha_innodb.cc */
-#define lower_case_file_system lower_case_file_system_server
-#define mysql_unpacked_real_data_home mysql_unpacked_real_data_home_server
-#include <sql_table.h>	// explain_filename, nz2, EXPLAIN_PARTITIONS_AS_COMMENT,
-			// EXPLAIN_FILENAME_MAX_EXTRA_LENGTH
 
 #include "univ.i"
 
@@ -123,7 +119,7 @@ MYSQL_PLUGIN_IMPORT extern char mysql_unpacked_real_data_home[];
 #include "ut0mem.h"
 #include "row0ext.h"
 
-enum_tx_isolation thd_get_trx_isolation(const THD* thd);
+#define thd_get_trx_isolation(X) ((enum_tx_isolation)thd_tx_isolation(X))
 
 #ifdef MYSQL_DYNAMIC_PLUGIN
 #define tc_size 2000
@@ -173,6 +169,27 @@ wsrep_fake_trx_id(handlerton* hton, THD *thd);
 static int innobase_wsrep_set_checkpoint(handlerton* hton, const XID* xid);
 static int innobase_wsrep_get_checkpoint(handlerton* hton, XID* xid);
 #endif /* WITH_WSREP */
+
+static
+void
+innobase_set_cursor_view(
+/*=====================*/
+	handlerton*	hton,	/*!< in: innobase hton */
+	THD*		thd,	/*!< in: user thread handle */
+	void*		curview);/*!< in: Consistent cursor view to be set */
+static
+void*
+innobase_create_cursor_view(
+/*========================*/
+	handlerton*	hton,	/*!< in: innobase hton */
+	THD*		thd);	/*!< in: user thread handle */
+static
+void
+innobase_close_cursor_view(
+/*=======================*/
+	handlerton*	hton,	/*!< in: innobase hton */
+	THD*		thd,	/*!< in: user thread handle */
+	void*		curview);/*!< in: Consistent read view to be closed */
 
 /** to protect innobase_open_files */
 static mysql_mutex_t innobase_share_mutex;
@@ -1187,7 +1204,7 @@ static SHOW_VAR innodb_status_variables[]= {
   {"scrub_background_page_split_failures_unknown",
    (char*) &export_vars.innodb_scrub_page_split_failures_unknown,
    SHOW_LONG},
-
+  {NullS, NullS, SHOW_LONG}
 };
 
 /************************************************************************//**
@@ -1418,43 +1435,6 @@ innobase_rollback_by_xid(
 	handlerton*	hton,		/*!< in: InnoDB handlerton */
 	XID*		xid);		/*!< in: X/Open XA transaction
 					identification */
-/*******************************************************************//**
-Create a consistent view for a cursor based on current transaction
-which is created if the corresponding MySQL thread still lacks one.
-This consistent view is then used inside of MySQL when accessing records
-using a cursor.
-@return	pointer to cursor view or NULL */
-static
-void*
-innobase_create_cursor_view(
-/*========================*/
-	handlerton*	hton,		/*!< in: innobase hton */
-	THD*		thd);		/*!< in: user thread handle */
-/*******************************************************************//**
-Set the given consistent cursor view to a transaction which is created
-if the corresponding MySQL thread still lacks one. If the given
-consistent cursor view is NULL global read view of a transaction is
-restored to a transaction read view. */
-static
-void
-innobase_set_cursor_view(
-/*=====================*/
-	handlerton*	hton,		/*!< in: handlerton of Innodb */
-	THD*		thd,		/*!< in: user thread handle */
-	void*		curview);	/*!< in: Consistent cursor view to
-					be set */
-/*******************************************************************//**
-Close the given consistent cursor view of a transaction and restore
-global read view to a transaction read view. Transaction is created if the
-corresponding MySQL thread still lacks one. */
-static
-void
-innobase_close_cursor_view(
-/*=======================*/
-	handlerton*	hton,		/*!< in: handlerton of Innodb */
-	THD*		thd,		/*!< in: user thread handle */
-	void*		curview);	/*!< in: Consistent read view to be
-					closed */
 
 /** This API handles CREATE, ALTER & DROP commands for InnoDB tablespaces.
 @param[in]	hton		Handlerton of InnoDB
@@ -1599,6 +1579,7 @@ innobase_fill_i_s_table(
 /** Store doc_id value into FTS_DOC_ID field
 @param[in,out]	tbl	table containing FULLTEXT index
 @param[in]	doc_id	FTS_DOC_ID value */
+static
 void
 innobase_fts_store_docid(
 	TABLE*		tbl,
@@ -1762,7 +1743,7 @@ thd_trx_arbitrate(THD* requestor, THD* holder)
 	/* JAN: TODO: MySQL 5.7
 	THD*	victim = thd_tx_arbitrate(requestor, holder);
 	*/
-	THD* victim = requestor;
+	THD* victim = NULL;
 
 	ut_a(victim == NULL || victim == requestor || victim == holder);
 
@@ -1979,22 +1960,6 @@ thd_supports_xa(
 	return(THDVAR(thd, support_xa));
 }
 
-/** Get the value of innodb_tmpdir.
-@param[in]	thd	thread handle, or NULL to query
-			the global innodb_tmpdir.
-@retval NULL if innodb_tmpdir="" */
-UNIV_INTERN
-const char*
-thd_innodb_tmpdir(
-	THD*	thd)
-{
-	const char*	tmp_dir = THDVAR(thd, tmpdir);
-	if (tmp_dir != NULL && *tmp_dir == '\0') {
-		tmp_dir = NULL;
-	}
-
-	return(tmp_dir);
-}
 /******************************************************************//**
 Returns the lock wait timeout for the current connection.
 @return the lock wait timeout, in seconds */
@@ -2578,11 +2543,11 @@ innobase_get_stmt_unsafe(
 	THD*	thd,
 	size_t*	length)
 {
-	LEX_CSTRING stmt;
+	LEX_STRING* stmt;
 
-	stmt = thd_query_unsafe(thd);
-	*length = stmt.length;
-	return(stmt.str);
+	stmt = thd_query_string(thd);
+	*length = stmt->length;
+	return(stmt->str);
 }
 
 /** Determines the current SQL statement.
@@ -2599,7 +2564,12 @@ innobase_get_stmt_safe(
 	char*	buf,
 	size_t	buflen)
 {
-	return(thd_query_safe(thd, buf, buflen));
+	LEX_STRING* stmt;
+
+	stmt = thd_query_string(thd);
+	memcpy(buf, stmt->str, buflen-1);
+	buf[stmt->length > buflen-1 ? buflen-1 : stmt->length]='\0';
+	return (stmt->length > buflen-1 ? buflen : stmt->length); 
 }
 
 /**********************************************************************//**
@@ -2627,13 +2597,12 @@ innobase_get_lower_case_table_names(void)
 	return(lower_case_table_names);
 }
 
-/** Create a temporary file in the location specified by the parameter
-path. If the path is null, then it will be created in tmpdir.
-@param[in]	path	location for creating temporary file
+/*********************************************************************//**
+Creates a temporary file.
 @return temporary file descriptor, or < 0 on error */
 int
-innobase_mysql_tmpfile(
-	const char*	path)
+innobase_mysql_tmpfile(void)
+/*========================*/
 {
 #ifdef WITH_INNODB_DISALLOW_WRITES
 	os_event_wait(srv_allow_writes_event);
@@ -2646,11 +2615,7 @@ innobase_mysql_tmpfile(
 		return(-1);
 	);
 
-	if (path == NULL) {
-		fd = mysql_tmpfile("ib");
-	} else {
-		fd = mysql_tmpfile_path(path, "ib");
-	}
+	fd = mysql_tmpfile("ib");
 
 	if (fd >= 0) {
 		/* Copy the file descriptor, so that the additional resources
@@ -2685,12 +2650,14 @@ innobase_mysql_tmpfile(
 		fd2 = dup(fd);
 #endif
 		if (fd2 < 0) {
+			char errbuf[MYSYS_STRERROR_SIZE];
 			DBUG_PRINT("error",("Got error %d on dup",fd2));
-			// JAN: TODO: MYSQL 5.7 set_my_errno(errno);
-			my_errno=errno;
+			set_my_errno(errno);
+			my_strerror(errbuf, sizeof(errbuf), my_errno);
 			my_error(EE_OUT_OF_FILERESOURCES,
 				 MYF(ME_BELL+ME_WAITTANG),
-				 "ib*", my_errno);
+				"ib*", my_errno,
+				errbuf);
 		}
 		my_close(fd, MYF(MY_WME));
 	}
@@ -2978,9 +2945,11 @@ check_trx_exists(
 {
 	trx_t*&	trx = thd_to_trx(thd);
 
+	ut_ad(EQ_CURRENT_THD(thd));
+
 	if (trx == NULL) {
 		trx = innobase_trx_allocate(thd);
-		thd_set_ha_data(thd, innodb_hton_ptr, trx);
+		// thd_set_ha_data(thd, innodb_hton_ptr, trx);
 
 		/* User trx can be forced to rollback,
 		so we unset the disable flag. */
@@ -5351,88 +5320,30 @@ innobase_close_connection(
 	THD*		thd)	/*!< in: handle to the MySQL thread of the user
 				whose resources should be free'd */
 {
-
 	DBUG_ENTER("innobase_close_connection");
 	DBUG_ASSERT(hton == innodb_hton_ptr);
 
-	trx_t*	trx = thd_to_trx(thd);
-	bool	free_trx = false;
+	trx_t* trx = thd_to_trx(thd);
+	ut_a(trx);
 
-	/* During server initialization MySQL layer will try to open
-	some of the master-slave tables those residing in InnoDB.
-	After MySQL layer is done with needed checks these tables
-	are closed followed by invocation of close_connection on the
-	associated thd.
+	if (!trx_is_registered_for_2pc(trx) && trx_is_started(trx)) {
 
-	close_connection rolls back the trx and then frees it.
-	Once trx is freed thd should avoid maintaining reference to
-	it else it can be classified as stale reference.
-
-	Re-invocation of innodb_close_connection on same thd should
-	get trx as NULL. */
-
-	if (trx != NULL) {
-
-		TrxInInnoDB	trx_in_innodb(trx);
-
-		if (trx_in_innodb.is_aborted()) {
-
-			while (trx_is_started(trx)) {
-
-				os_thread_sleep(20);
-			}
-		}
-
-		if (!trx_is_registered_for_2pc(trx) && trx_is_started(trx) && 
-		    global_system_variables.log_warnings) {
-
-			sql_print_error("Transaction not registered for MySQL"
-					" 2PC, but transaction is active");
-		}
-
-		/* Disconnect causes rollback in the following cases:
-		- trx is not started, or
-		- trx is in *not* in PREPARED state, or
-		- trx has not updated any persistent data.
-		TODO/FIXME: it does not make sense to initiate rollback
-		in the 1st and 3rd case. */
-		if (trx_is_started(trx)) {
-			if (trx_state_eq(trx, TRX_STATE_PREPARED)) {
-				if (trx_is_redo_rseg_updated(trx)) {
-					trx_disconnect_prepared(trx);
-				} else {
-					trx_rollback_for_mysql(trx);
-					trx_deregister_from_2pc(trx);
-					free_trx = true;
-				}
-			} else {
-				sql_print_warning(
-					"MySQL is closing a connection that "
-					"has an active InnoDB transaction.  "
-					TRX_ID_FMT
-					" row modifications will roll back.",
-					trx->undo_no);
-				ut_d(ib::warn()
-				     << "trx: " << trx << " started on: "
-				     << innobase_basename(trx->start_file)
-				     << ":" << trx->start_line);
-				innobase_rollback_trx(trx);
-				free_trx = true;
-			}
-		} else {
-			innobase_rollback_trx(trx);
-			free_trx = true;
-		}
+		sql_print_error("Transaction not registered for MySQL 2PC, "
+				"but transaction is active");
 	}
 
-	/* Free trx only after TrxInInnoDB is deleted. */
-	if (free_trx) {
-		trx_free_for_mysql(trx);
+	if (trx_is_started(trx) && global_system_variables.log_warnings) {
+
+		sql_print_warning(
+			"MySQL is closing a connection that has an active "
+			"InnoDB transaction.  " TRX_ID_FMT " row modifications "
+			"will roll back.",
+			trx->undo_no);
 	}
 
-	UT_DELETE(thd_to_innodb_session(thd));
+	innobase_rollback_trx(trx);
 
-	thd_to_innodb_session(thd) = NULL;
+	trx_free_for_mysql(trx);
 
 	DBUG_RETURN(0);
 }
@@ -5501,7 +5412,7 @@ innobase_kill_query(
 		could own lock_sys mutex taken in
 		lock_deadlock_check_and_resolve(). */
 
-		WSREP_DEBUG("Killing victim trx %p BF %d trx BF %d trx_id " TRX_ID_FMT " ABORT %d thd %p"
+		/*		WSREP_DEBUG("Killing victim trx %p BF %d trx BF %d trx_id " TRX_ID_FMT " ABORT %d thd %p"
 			" current_thd %p BF %d wait_lock_modes: %s\n",
 			trx, wsrep_thd_is_BF(trx->mysql_thd, FALSE),
 			wsrep_thd_is_BF(thd, FALSE),
@@ -5510,7 +5421,7 @@ innobase_kill_query(
 			current_thd,
 			wsrep_thd_is_BF(current_thd, FALSE),
 			lock_get_info(trx->lock.wait_lock).c_str());
-
+		*/
 		if (!wsrep_thd_is_BF(trx->mysql_thd, FALSE) &&
 		    trx->abort_type == TRX_SERVER_ABORT) {
 			ut_ad(!lock_mutex_own());
@@ -5586,7 +5497,8 @@ ha_innobase::table_flags() const
 	/* If querying the table flags when no table_share is given,
 	then we must check if the table to be created/checked is partitioned.
 	*/
-	if (table_share == NULL && thd_get_work_part_info(thd) != NULL) {
+	if (table_share == NULL) {
+	  /* JAN: TODO: MySQL 5.7 Partitioning && thd_get_work_part_info(thd) != NULL) { */
 		/* Currently ha_innopart does not support
 		all InnoDB features such as GEOMETRY, FULLTEXT etc. */
 		/* JAN: TODO: MySQL 5.7
@@ -7676,6 +7588,7 @@ get_innobase_type_from_mysql_type(
 	case MYSQL_TYPE_MEDIUM_BLOB:
 	case MYSQL_TYPE_BLOB:
 	case MYSQL_TYPE_LONG_BLOB:
+		return(DATA_BLOB);
 	/* JAN: TODO: MySQL 5.7 JSON
         case MYSQL_TYPE_JSON:   // JSON fields are stored as BLOBs
 		return(DATA_BLOB);
@@ -8324,7 +8237,7 @@ ha_innobase::build_template(
 				sql_idx++;
 			}
 
-			if (innobase_is_v_fld(table->field[i])) {
+			if (innobase_is_v_fld(table->field[sql_idx])) {
 				index_contains = dict_index_contains_col_or_prefix(
 					index, num_v, true);
 			} else {
@@ -8347,7 +8260,8 @@ ha_innobase::build_template(
 			the subset
 			field->part_of_key.is_set(active_index)
 			which would be acceptable if end_range==NULL. */
-			bool	is_v = innobase_is_v_fld(table->field[i]);
+			bool	is_v = innobase_is_v_fld(table->field[sql_idx]);
+
 			if (build_template_needs_field_in_icp(
 				    index, m_prebuilt, index_contains,
 				    is_v ? num_v : i - num_v, is_v)) {
@@ -8366,7 +8280,7 @@ ha_innobase::build_template(
 						index, table, i, sql_idx, num_v);
 					if (!field) {
 						if (innobase_is_v_fld(
-							table->field[i])) {
+							table->field[sql_idx])) {
 							num_v++;
 						}
 						continue;
@@ -8448,7 +8362,7 @@ ha_innobase::build_template(
 				      < m_prebuilt->index->n_uniq);
 				*/
 			}
-			if (innobase_is_v_fld(table->field[i])) {
+			if (innobase_is_v_fld(table->field[sql_idx])) {
 				num_v++;
 			}
 		}
@@ -8463,12 +8377,12 @@ ha_innobase::build_template(
 		for (i = 0, sql_idx = 0; i < n_stored_fields; i++, sql_idx++) {
 			mysql_row_templ_t*	templ;
 			ibool			index_contains;
-			
+
                         while (!table->field[sql_idx]->stored_in_db()) {
 			        sql_idx++;
                         }
 
-			if (innobase_is_v_fld(table->field[i])) {
+			if (innobase_is_v_fld(table->field[sql_idx])) {
 				index_contains = dict_index_contains_col_or_prefix(
 					index, num_v, true);
 			} else {
@@ -8476,7 +8390,7 @@ ha_innobase::build_template(
 					index, i - num_v, false);
 			}
 
-			bool	is_v = innobase_is_v_fld(table->field[i]);
+			bool	is_v = innobase_is_v_fld(table->field[sql_idx]);
 
 			if (!build_template_needs_field_in_icp(
 				    index, m_prebuilt, index_contains,
@@ -8494,7 +8408,7 @@ ha_innobase::build_template(
 						fetch_primary_key_cols,
 						index, table, i, sql_idx, num_v);
 					if (!field) {
-						if (innobase_is_v_fld(table->field[i])) {
+						if (innobase_is_v_fld(table->field[sql_idx])) {
 							num_v++;
 						}
 						continue;
@@ -8532,7 +8446,7 @@ ha_innobase::build_template(
 				will not try to fill the value since they
 				are not stored in such index nor in the
 				cluster index. */
-				if (innobase_is_v_fld(table->field[i])
+				if (innobase_is_v_fld(table->field[sql_idx])
 				    && m_prebuilt->read_just_key
 				    && !dict_index_contains_col_or_prefix(
 					m_prebuilt->index, num_v, true))
@@ -8544,11 +8458,11 @@ ha_innobase::build_template(
 
 					continue;
 				}
-
+				field = table->field[sql_idx];
 			} else {
 				ibool	contain;
 
-				if (innobase_is_v_fld(table->field[i])) {
+				if (innobase_is_v_fld(table->field[sql_idx])) {
 					contain = dict_index_contains_col_or_prefix(
 						index, num_v, true);
 				} else {
@@ -8563,8 +8477,9 @@ ha_innobase::build_template(
 					fetch_all_in_key,
 					fetch_primary_key_cols,
 					index, table, i, sql_idx, num_v);
+
 				if (!field) {
-					if (innobase_is_v_fld(table->field[i])) {
+					if (innobase_is_v_fld(table->field[sql_idx])) {
 						num_v++;
 					}
 					continue;
@@ -10551,11 +10466,6 @@ ha_innobase::general_fetch(
 	innobase_srv_conc_enter_innodb(m_prebuilt);
 
 	dberr_t	ret;
-
-	/* If transaction is not startted do not continue, instead return a error code. */
-	if(!(m_prebuilt->sql_stat_start || (m_prebuilt->trx && m_prebuilt->trx->state == 1))) {
-		DBUG_RETURN(HA_ERR_END_OF_FILE);
-	}
 
 	if (!intrinsic) {
 		ret = row_search_mvcc(
@@ -15627,7 +15537,7 @@ ha_innobase::records_in_range(
 				index, range_start, mode1);
 		} else {
 			n_rows = btr_estimate_n_rows_in_range(
-				index, range_start, mode1, range_end, mode2, m_prebuilt->trx);
+				index, range_start, mode1, range_end, mode2);
 		}
 	} else {
 
@@ -23927,6 +23837,31 @@ innobase_convert_to_system_charset(
 	return(static_cast<uint>(strconvert(
 				cs1, from, strlen(from),
 				cs2, to, static_cast<size_t>(len), errors)));
+}
+
+/**********************************************************************
+Issue a warning that the row is too big. */
+void
+ib_warn_row_too_big(const dict_table_t*	table)
+{
+	/* If prefix is true then a 768-byte prefix is stored
+	locally for BLOB fields. Refer to dict_table_get_format() */
+	const bool prefix = (dict_tf_get_format(table->flags)
+			     == UNIV_FORMAT_A);
+
+	const ulint	free_space = page_get_free_space_of_empty(
+		table->flags & DICT_TF_COMPACT) / 2;
+
+	THD*	thd = current_thd;
+
+	push_warning_printf(
+		thd, Sql_condition::WARN_LEVEL_WARN, HA_ERR_TO_BIG_ROW,
+		"Row size too large (> %lu). Changing some columns to TEXT"
+		" or BLOB %smay help. In current row format, BLOB prefix of"
+		" %d bytes is stored inline.", free_space
+		, prefix ? "or using ROW_FORMAT=DYNAMIC or"
+		" ROW_FORMAT=COMPRESSED ": ""
+		, prefix ? DICT_MAX_FIXED_COL_LEN : 0);
 }
 
 /*************************************************************//**

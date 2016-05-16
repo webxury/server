@@ -174,14 +174,14 @@ log_blocks_crypt(
 		block can't be encrypted. */
 		if (info == NULL ||
 		    info->key_version == UNENCRYPTED_KEY_VER ||
-			(log_block_checksum_is_ok_or_old_format(log_block, false) &&
+			(log_block_checksum_is_ok(log_block, false) &&
 			 what == ENCRYPTION_FLAG_DECRYPT)) {
 			memcpy(dst_block, log_block, OS_FILE_LOG_BLOCK_SIZE);
 			goto next;
 		}
 
-		ut_ad(what == ENCRYPTION_FLAG_DECRYPT ? !log_block_checksum_is_ok_or_old_format(log_block, false) :
-			log_block_checksum_is_ok_or_old_format(log_block, false));
+		ut_ad(what == ENCRYPTION_FLAG_DECRYPT ? !log_block_checksum_is_ok(log_block, false) :
+			log_block_checksum_is_ok(log_block, false));
 
 		// Assume log block header is not encrypted
 		memcpy(dst_block, log_block, LOG_BLOCK_HDR_SIZE);

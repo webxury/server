@@ -652,6 +652,18 @@ ha_innobase::check_if_supported_inplace_alter(
 		DBUG_RETURN(HA_ALTER_INPLACE_NOT_SUPPORTED);
 	}
 
+	/* InnoDB cannot IGNORE when creating unique indexes. IGNORE
+	should silently delete some duplicate rows. Our inplace_alter
+	code will not delete anything from existing indexes. */
+	if (ha_alter_info->ignore
+	    && (ha_alter_info->handler_flags
+		& (Alter_inplace_info::ADD_PK_INDEX
+		   | Alter_inplace_info::ADD_UNIQUE_INDEX))) {
+		ha_alter_info->unsupported_reason = innobase_get_err_msg(
+			ER_ALTER_OPERATION_NOT_SUPPORTED_REASON_IGNORE);
+		DBUG_RETURN(HA_ALTER_INPLACE_NOT_SUPPORTED);
+	}
+
 	/* DROP PRIMARY KEY is only allowed in combination with ADD
 	PRIMARY KEY. */
 	if ((ha_alter_info->handler_flags
@@ -4288,8 +4300,9 @@ prepare_inplace_alter_table_dict(
 	ctx->num_to_add_index = ha_alter_info->index_add_count;
 
 	ut_ad(ctx->prebuilt->trx->mysql_thd != NULL);
-	const char*	path = thd_innodb_tmpdir(
+	/* const char*	path = thd_innodb_tmpdir(
 		ctx->prebuilt->trx->mysql_thd);
+	*/
 
 	index_defs = innobase_create_key_defs(
 		ctx->heap, ha_alter_info, altered_table, ctx->num_to_add_index,
@@ -4317,7 +4330,7 @@ prepare_inplace_alter_table_dict(
 		check_if_supported_inplace_alter(). */
 		ut_ad(0);
 		my_error(ER_NOT_SUPPORTED_YET, MYF(0),
-			 thd_query_unsafe(ctx->prebuilt->trx->mysql_thd).str);
+			 thd_query(ctx->prebuilt->trx->mysql_thd));
 		goto error_handled;
 	}
 
@@ -4469,10 +4482,9 @@ prepare_inplace_alter_table_dict(
 
                 sql_idx= 0;
 		for (uint i = 0; i < altered_table->s->stored_fields; i++, sql_idx++) {
-			const Field*	field;
+			const Field*	field = altered_table->field[sql_idx];
 			ulint		is_unsigned;
-			ulint		field_type
-				= (ulint) field->type();
+			ulint		field_type = (ulint) field->type();
 			ulint		col_type
 				= get_innobase_type_from_mysql_type(
 					&is_unsigned, field);
@@ -5423,18 +5435,15 @@ ha_innobase::prepare_inplace_alter_table(
 	if (ha_alter_info->handler_flags
 	    & Alter_inplace_info::CHANGE_CREATE_OPTION) {
 		const char* invalid_opt = info.create_options_are_invalid();
-		if (invalid_opt) {
+
 		/* Check engine specific table options */
-		if (const char* invalid_tbopt = check_table_options(
-				m_user_thd, altered_table,
-				ha_alter_info->create_info,
-				m_prebuilt->table->space != 0,
-				srv_file_format)) {
+		if (const char* invalid_tbopt = info.check_table_options()) {
 			my_error(ER_ILLEGAL_HA_CREATE_OPTION, MYF(0),
 				 table_type(), invalid_tbopt);
 			goto err_exit_no_heap;
 		}
 
+		if (invalid_opt) {
 			my_error(ER_ILLEGAL_HA_CREATE_OPTION, MYF(0),
 				 table_type(), invalid_opt);
 			goto err_exit_no_heap;
@@ -6996,11 +7005,9 @@ commit_get_autoinc(
 
 		Field*	autoinc_field =
 			old_table->found_next_number_field;
-		KEY*	autoinc_key =
-			old_table->key_info + old_table->s->next_number_index;
 
-		dict_index_t*	index = dict_table_get_index_on_name(
-			ctx->old_table, autoinc_key->name);
+		dict_index_t*	index = dict_table_get_index_on_first_col(
+			ctx->old_table, autoinc_field->field_index);
 
 		max_autoinc = ha_alter_info->create_info->auto_increment_value;
 

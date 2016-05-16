@@ -30,6 +30,7 @@ Created 2013-7-26 by Kevin Lewis
 #include "log0log.h"
 #include "mem0mem.h"
 #include "os0file.h"
+#include "fil0crypt.h"
 #include <vector>
 
 /** Types of raw partitions in innodb_data_file_path */
@@ -65,6 +66,7 @@ public:
 		m_first_page_buf(),
 		m_first_page(),
 		m_atomic_write(),
+		m_crypt_info(),
 		m_last_os_error(),
 		m_file_info()
 	{
@@ -88,6 +90,7 @@ public:
 		m_first_page_buf(),
 		m_first_page(),
 		m_atomic_write(),
+		m_crypt_info(),
 		m_last_os_error(),
 		m_file_info()
 	{
@@ -109,6 +112,7 @@ public:
 		m_first_page_buf(),
 		m_first_page(),
 		m_atomic_write(file.m_atomic_write),
+		m_crypt_info(),
 		m_last_os_error(),
 		m_file_info()
 	{
@@ -151,6 +155,8 @@ public:
 		m_space_id = file.m_space_id;
 		m_flags = file.m_flags;
 		m_last_os_error = 0;
+		/* Do not copy crypt info it is read from first page */
+		m_crypt_info = NULL;
 
 		if (m_filepath != NULL) {
 			ut_free(m_filepath);
@@ -324,6 +330,11 @@ public:
 		return(m_last_os_error);
 	}
 
+	fil_space_crypt_t* get_crypt_info() const
+	{
+		return(m_crypt_info);
+	}
+
 	/** Test if the filepath provided looks the same as this filepath
 	by string comparison. If they are two different paths to the same
 	file, same_as() will be used to show that after the files are opened.
@@ -454,6 +465,9 @@ private:
 
 	/** true if atomic writes enabled for this file */
 	bool			m_atomic_write;
+
+	/** Encryption information */
+	fil_space_crypt_t* m_crypt_info;
 
 protected:
 	/** Last OS error received so it can be reported if needed. */

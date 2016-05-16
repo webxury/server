@@ -4178,8 +4178,8 @@ buf_page_get_gen(
 	const char*		file,
 	ulint			line,
 	mtr_t*			mtr,
-	bool			dirty_with_no_latch,
-	dberr_t*		err)	/*!< out: error code */
+	dberr_t*		err,
+	bool			dirty_with_no_latch)
 {
 	buf_block_t*	block;
 	unsigned	access_time;
@@ -5951,6 +5951,8 @@ buf_page_io_complete(
 		byte*	frame;
 		bool	compressed_page;
 
+		ut_ad(bpage->zip.data != NULL || ((buf_block_t*)bpage)->frame != NULL);
+
 		if (!buf_page_decrypt_after_read(bpage)) {
 			/* encryption error! */
 			if (bpage->size.is_compressed()) {
@@ -7567,10 +7569,10 @@ buf_page_decrypt_after_read(
 /*========================*/
 	buf_page_t*	bpage)	/*!< in/out: buffer page read from disk */
 {
-	ulint zip_size = bpage->size.logical();
-	ulint size = (zip_size) ? zip_size : UNIV_PAGE_SIZE;
+	bool compressed = bpage->size.is_compressed();
+	ulint size = bpage->size.logical();
 
-	byte* dst_frame = (zip_size) ? bpage->zip.data :
+	byte* dst_frame = compressed ? bpage->zip.data :
 		((buf_block_t*) bpage)->frame;
 	unsigned key_version =
 		mach_read_from_4(dst_frame + FIL_PAGE_FILE_FLUSH_LSN_OR_KEY_VERSION);
@@ -7632,7 +7634,7 @@ buf_page_decrypt_after_read(
 			/* Calculate checksum before decrypt, this will be
 			used later to find out if incorrect key was used. */
 			if (!page_compressed_encrypted) {
-				bpage->calculated_checksum = fil_crypt_calculate_checksum(zip_size, dst_frame);
+				bpage->calculated_checksum = fil_crypt_calculate_checksum(size, dst_frame);
 			}
 
 			/* decrypt using crypt_buf to dst_frame */

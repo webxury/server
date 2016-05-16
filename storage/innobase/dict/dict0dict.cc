@@ -2,7 +2,7 @@
 
 Copyright (c) 1996, 2015, Oracle and/or its affiliates. All Rights Reserved.
 Copyright (c) 2012, Facebook Inc.
-Copyright (c) 2013, 2015, MariaDB Corporation.
+Copyright (c) 2013, 2016, MariaDB Corporation.
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -1001,7 +1001,9 @@ dict_index_get_nth_col_or_prefix_pos(
 		field = dict_index_get_nth_field(index, pos);
 
 		if (col == field->col) {
-			*prefix_col_pos = pos;
+			if (prefix_col_pos) {
+				*prefix_col_pos = pos;
+			}
 			if (inc_prefix || field->prefix_len == 0) {
 				return(pos);
 			}
@@ -1161,10 +1163,11 @@ ulint
 dict_table_get_nth_col_pos(
 /*=======================*/
 	const dict_table_t*	table,	/*!< in: table */
-	ulint			n)	/*!< in: column number */
+	ulint			n,	/*!< in: column number */
+	ulint*			prefix_col_pos)
 {
 	return(dict_index_get_nth_col_pos(dict_table_get_first_index(table),
-					  n, NULL));
+					  n, prefix_col_pos));
 }
 
 /********************************************************************//**
@@ -1793,6 +1796,7 @@ dict_table_rename_in_cache(
 	.ibd file and rebuild the .isl file if needed. */
 
 	if (dict_table_is_discarded(table)) {
+		os_file_type_t	type;
 		bool		exists;
 		char*		filepath;
 
@@ -1820,7 +1824,7 @@ dict_table_rename_in_cache(
 		fil_delete_tablespace(table->space, BUF_REMOVE_ALL_NO_WRITE);
 
 		/* Delete any temp file hanging around. */
-		if (os_file_status(filepath, &exists, &ftype)
+		if (os_file_status(filepath, &exists, &type)
 		    && exists
 		    && !os_file_delete_if_exists(innodb_temp_file_key,
 						 filepath, NULL)) {
@@ -2670,7 +2674,7 @@ dict_index_add_to_cache_w_vcol(
 		} else if (current_thd != NULL) {
 			/* Avoid the warning to be printed
 			during recovery. */
-			ib_warn_row_too_big(table);
+			ib_warn_row_too_big((const dict_table_t*)table);
 		}
 	}
 

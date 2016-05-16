@@ -941,7 +941,7 @@ btr_cur_search_to_nth_level(
 		      || mode != PAGE_CUR_LE);
 		btr_cur_n_sea++;
 
-		return err;
+		DBUG_RETURN(err);
 	}
 # endif /* BTR_CUR_HASH_ADAPT */
 #endif /* BTR_CUR_ADAPT */
@@ -7671,7 +7671,7 @@ btr_free_externally_stored_field(
 				page + FIL_PAGE_DATA
 				+ BTR_BLOB_HDR_NEXT_PAGE_NO);
 
-			btr_page_free_low(index, ext_block, ULINT_UNDEFINED,
+			btr_page_free_low(index, ext_block, 0,
 					  true, &mtr);
 
 			mlog_write_ulint(field_ref + BTR_EXTERN_PAGE_NO,
@@ -7786,8 +7786,7 @@ btr_copy_blob_prefix(
 	ulint		len,	/*!< in: length of buf, in bytes */
 	ulint		space_id,/*!< in: space id of the BLOB pages */
 	ulint		page_no,/*!< in: page number of the first BLOB page */
-	ulint		offset,	/*!< in: offset on the first BLOB page */
-	trx_t*		trx)	/*!< in: transaction handle */
+	ulint		offset)	/*!< in: offset on the first BLOB page */
 {
 	ulint	copied_len	= 0;
 
@@ -7991,7 +7990,6 @@ field, or a prefix of it
 @param[in]	space_id	space id of the first BLOB page
 @param[in]	page_no		page number of the first BLOB page
 @param[in]	offset		offset on the first BLOB page
-@param[in]	trx		transaction
 @return number of bytes written to buf */
 static
 ulint
@@ -8001,8 +7999,7 @@ btr_copy_externally_stored_field_prefix_low(
 	const page_size_t&	page_size,
 	ulint			space_id,
 	ulint			page_no,
-	ulint			offset,
-	trx_t*			trx)	/*!< in: transaction handle */
+	ulint			offset)
 {
 	if (len == 0) {
 		return(0);
@@ -8014,7 +8011,7 @@ btr_copy_externally_stored_field_prefix_low(
 	} else {
 		ut_ad(page_size.equals_to(univ_page_size));
 		return(btr_copy_blob_prefix(buf, len, space_id,
-					    page_no, offset, trx));
+					    page_no, offset));
 	}
 }
 
@@ -8035,8 +8032,7 @@ btr_copy_externally_stored_field_prefix(
 	ulint			len,
 	const page_size_t&	page_size,
 	const byte*		data,
-	ulint			local_len,
-	trx_t*			trx)	/*!< in: transaction handle */
+	ulint			local_len)
 {
 	ulint	space_id;
 	ulint	page_no;
@@ -8075,7 +8071,7 @@ btr_copy_externally_stored_field_prefix(
 							     len - local_len,
 							     page_size,
 							     space_id, page_no,
-							     offset, trx));
+							     offset));
 }
 
 /** Copies an externally stored field of a record to mem heap.
@@ -8094,8 +8090,7 @@ btr_copy_externally_stored_field(
 	const byte*		data,
 	const page_size_t&	page_size,
 	ulint			local_len,
-	mem_heap_t*		heap,
-	trx_t*			trx)	/*!< in: transaction handle */
+	mem_heap_t*		heap)
 {
 	ulint	space_id;
 	ulint	page_no;
@@ -8126,8 +8121,7 @@ btr_copy_externally_stored_field(
 							      extern_len,
 							      page_size,
 							      space_id,
-							      page_no, offset,
-							      trx);
+							      page_no, offset);
 
 	return(buf);
 }
@@ -8148,8 +8142,7 @@ btr_rec_copy_externally_stored_field(
 	const page_size_t&	page_size,
 	ulint			no,
 	ulint*			len,
-	mem_heap_t*		heap,
-	trx_t*			trx)	/*!< in: transaction handle */
+	mem_heap_t*		heap)
 {
 	ulint		local_len;
 	const byte*	data;
@@ -8180,7 +8173,6 @@ btr_rec_copy_externally_stored_field(
 	}
 
 	return(btr_copy_externally_stored_field(len, data,
-						page_size, local_len, heap,
-						trx));
+						page_size, local_len, heap));
 }
 #endif /* !UNIV_HOTBACKUP */

@@ -3459,8 +3459,7 @@ fts_fetch_doc_from_rec(
 					dict_table_page_size(table),
 					clust_pos, &doc->text.f_len,
 					static_cast<mem_heap_t*>(
-						doc->self_heap->arg),
-					NULL);
+						doc->self_heap->arg));
 		} else {
 			doc->text.f_str = (byte*) rec_get_nth_field(
 				clust_rec, offsets, clust_pos,

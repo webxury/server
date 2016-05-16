@@ -9343,8 +9343,6 @@ static ST_FIELD_INFO	innodb_mutexes_fields_info[] =
 	END_OF_ST_FIELD_INFO
 };
 
-extern ib_mutex_t	mutex_list_mutex;
-
 /*******************************************************************//**
 Function to populate INFORMATION_SCHEMA.INNODB_MUTEXES table.
 Loop through each record in mutex and rw_lock lists, and extract the column
@@ -9374,7 +9372,7 @@ i_s_innodb_mutexes_fill_table(
 		DBUG_RETURN(0);
 	}
 
-	mutex_enter(&mutex_list_mutex);
+	// mutex_enter(&mutex_list_mutex);
 
 	/* JAN: TODO: FIXME:
 	for (mutex = UT_LIST_GET_FIRST(os_mutex_list); mutex != NULL;

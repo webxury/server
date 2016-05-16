@@ -261,6 +261,8 @@ row_merge_rename_index_to_drop(
 @param[in]	index_def	the index definition
 @param[in]	add_v		new virtual columns added along with add
 				index call
+@param[in]	col_names	column names if columns are renamed
+				or NULL
 @return index, or NULL on error */
 dict_index_t*
 row_merge_create_index(

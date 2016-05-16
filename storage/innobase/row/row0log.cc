@@ -1529,7 +1529,7 @@ row_log_table_apply_convert_mrec(
 			data = btr_rec_copy_externally_stored_field(
 				mrec, offsets,
 				dict_table_page_size(index->table),
-				i, &len, heap, NULL);
+				i, &len, heap);
 			ut_a(data);
 			dfield_set_data(dfield, data, len);
 blob_done:
@@ -3150,9 +3150,8 @@ row_log_allocate(
 	const dtuple_t*	add_cols,
 				/*!< in: default values of
 				added columns, or NULL */
-	const ulint*	col_map,/*!< in: mapping of old column
+	const ulint*	col_map)/*!< in: mapping of old column
 				numbers to new ones, or NULL if !table */
-	const char*	path)	/*!< in: where to create temporary file */
 {
 	row_log_t*	log;
 	DBUG_ENTER("row_log_allocate");

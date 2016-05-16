@@ -429,6 +429,9 @@ SET(INNOBASE_SOURCES
 	fts/fts0que.cc
 	fts/fts0sql.cc
 	fts/fts0tlex.cc
+	gis/gis0geo.cc
+	gis/gis0rtree.cc
+	gis/gis0sea.cc
 	handler/ha_innodb.cc
 #	handler/ha_innopart.cc
 	handler/handler0alter.cc

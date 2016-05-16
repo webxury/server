@@ -637,9 +637,8 @@ btr_estimate_n_rows_in_range(
 	const dtuple_t*	tuple1,
 	page_cur_mode_t	mode1,
 	const dtuple_t*	tuple2,
-	page_cur_mode_t	mode2,
+	page_cur_mode_t	mode2);
 
-	trx_t*		trx);	/*!< in: trx */
 /*******************************************************************//**
 Estimates the number of different key values in a given index, for
 each n-column prefix of the index where 1 <= n <= dict_index_get_n_unique(index).
@@ -801,7 +800,6 @@ protected by a lock or a page latch
 @param[in]	no		field number
 @param[out]	len		length of the field
 @param[in,out]	heap		mem heap
-@param[in]	trx		transaction
 @return the field copied to heap, or NULL if the field is incomplete */
 byte*
 btr_rec_copy_externally_stored_field(
@@ -810,8 +808,8 @@ btr_rec_copy_externally_stored_field(
 	const page_size_t&	page_size,
 	ulint			no,
 	ulint*			len,
-	mem_heap_t*		heap,
-	trx_t*			trx);
+	mem_heap_t*		heap);
+
 /*******************************************************************//**
 Flags the data tuple fields that are marked as extern storage in the
 update vector.  We use this function to remember which fields we must

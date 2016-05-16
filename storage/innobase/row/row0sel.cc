@@ -514,7 +514,8 @@ row_sel_fetch_columns(
 				data = btr_rec_copy_externally_stored_field(
 					rec, offsets,
 					dict_table_page_size(index->table),
-					field_no, &len, heap, NULL);
+					field_no, &len, heap);
+				//field_no, &len, heap, NULL);
 
 				/* data == NULL means that the
 				externally stored field was not
@@ -3093,7 +3094,8 @@ row_sel_store_mysql_field_func(
 		data = btr_rec_copy_externally_stored_field(
 			rec, offsets,
 			dict_table_page_size(prebuilt->table),
-			field_no, &len, heap, NULL);
+			field_no, &len, heap);
+		//field_no, &len, heap, NULL);
 
 		if (UNIV_UNLIKELY(!data)) {
 			/* The externally stored field was not written

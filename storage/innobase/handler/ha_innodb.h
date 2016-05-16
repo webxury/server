@@ -584,9 +584,6 @@ the definitions are bracketed with #ifdef INNODB_COMPATIBILITY_HOOKS */
 #error InnoDB needs MySQL to be built with #define INNODB_COMPATIBILITY_HOOKS
 #endif
 
-LEX_CSTRING thd_query_unsafe(MYSQL_THD thd);
-size_t thd_query_safe(MYSQL_THD thd, char *buf, size_t buflen);
-
 extern "C" {
 
 CHARSET_INFO *thd_charset(MYSQL_THD thd);
@@ -646,9 +643,11 @@ bool thd_is_strict_mode(const MYSQL_THD thd);
 /** Get the partition_info working copy.
 @param	thd	Thread object.
 @return	NULL or pointer to partition_info working copy. */
+/* JAN: TODO: MySQL 5.7 Partitioning
 partition_info*
 thd_get_work_part_info(
 	THD*	thd);
+*/
 } /* extern "C" */
 
 struct trx_t;
