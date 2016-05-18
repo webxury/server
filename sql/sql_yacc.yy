@@ -1037,10 +1037,10 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %parse-param { THD *thd }
 %lex-param { THD *thd }
 /*
-  Currently there are 123 shift/reduce conflicts.
+  Currently there are 104 shift/reduce conflicts.
   We should not introduce new conflicts any more.
 */
-%expect 123
+%expect 104
 
 /*
    Comments for TOKENS.
@@ -1879,6 +1879,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %type <table_list>
         join_table_list  join_table
         table_factor table_ref esc_table_ref
+        table_primary_ident table_primary_derived
         select_derived derived_table_list
         select_derived_union
 
@@ -1919,7 +1920,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %type <variable> internal_variable_name
 
 %type <select_lex> subselect
-        get_select_lex query_term
+        get_select_lex get_select_lex_derived
         query_expression_body
 
 %type <boolfunc2creator> comp_op
@@ -10766,7 +10767,7 @@ when_list:
 /* Equivalent to <table reference> in the SQL:2003 standard. */
 /* Warning - may return NULL in case of incomplete SELECT */
 table_ref:
-          table_factor { $$=$1; }
+          table_factor     { $$= $1; }
         | join_table
           {
             LEX *lex= Lex;
@@ -10967,6 +10968,11 @@ use_partition:
 */   
 /* Warning - may return NULL in case of incomplete SELECT */
 table_factor:
+          table_primary_ident
+        | table_primary_derived
+        ;
+
+table_primary_ident:
           {
             SELECT_LEX *sel= Select;
             sel->table_join_options= 0;
@@ -10982,7 +10988,10 @@ table_factor:
               MYSQL_YYABORT;
             Select->add_joined_table($$);
           }
-        | select_derived_init get_select_lex select_derived2
+        ;
+
+table_ref_select:
+          select_derived_init get_select_lex select_derived2
           {
             LEX *lex= Lex;
             SELECT_LEX *sel= lex->current_select;
@@ -10996,42 +11005,41 @@ table_factor:
             }
             if ($2->init_nested_join(lex->thd))
               MYSQL_YYABORT;
-            $$= 0;
-            /* incomplete derived tables return NULL, we must be
-               nested in select_derived rule to be here. */
           }
-          /*
-            Represents a flattening of the following rules from the SQL:2003
-            standard. This sub-rule corresponds to the sub-rule
-            <table primary> ::= ... | <derived table> [ AS ] <correlation name>
-            
-            The following rules have been flattened into query_expression_body
-            (since we have no <with clause>).
+        ;
 
-            <derived table> ::= <table subquery>
-            <table subquery> ::= <subquery>
-            <subquery> ::= <left paren> <query expression> <right paren>
-            <query expression> ::= [ <with clause> ] <query expression body>
 
-            For the time being we use the non-standard rule
-            select_derived_union which is a compromise between the standard
-            and our parser. Possibly this rule could be replaced by our
-            query_expression_body.
-          */
-        | '('opt_with_clause get_select_lex select_derived_union ')' opt_table_alias
+/*
+  Represents a flattening of the following rules from the SQL:2003
+  standard. This sub-rule corresponds to the sub-rule
+  <table primary> ::= ... | <derived table> [ AS ] <correlation name>
+
+  <derived table> ::= <table subquery>
+  <table subquery> ::= <subquery>
+  <subquery> ::= <left paren> <query expression> <right paren>
+  <query expression> ::= [ <with clause> ] <query expression body>
+
+  For the time being we use the non-standard rule
+  select_derived_union which is a compromise between the standard
+  and our parser. Possibly this rule could be replaced by our
+  query_expression_body.
+*/
+
+table_primary_derived:
+          '(' get_select_lex select_derived_union ')' opt_table_alias
           {
-            /* Use $3 instead of Lex->current_select as derived table will
+            /* Use $2 instead of Lex->current_select as derived table will
                alter value of Lex->current_select. */
-            if (!($4 || $6) && $3->embedding &&
-                !$3->embedding->nested_join->join_list.elements)
+            if (!($3 || $5) && $2->embedding &&
+                !$2->embedding->nested_join->join_list.elements)
             {
-              /* we have a derived table ($4 == NULL) but no alias,
+              /* we have a derived table ($3 == NULL) but no alias,
                  Since we are nested in further parentheses so we
                  can pass NULL to the outer level parentheses
                  Permits parsing of "((((select ...))) as xyz)" */
               $$= 0;
             }
-            else if (!$4)
+            else if (!$3)
             {
               /* Handle case of derived table, alias may be NULL if there
                  are no outer parentheses, add_table_to_list() will throw
@@ -11039,13 +11047,12 @@ table_factor:
               LEX *lex=Lex;
               SELECT_LEX *sel= lex->current_select;
               SELECT_LEX_UNIT *unit= sel->master_unit();
-              unit->set_with_clause($2);
               lex->current_select= sel= unit->outer_select();
               Table_ident *ti= new (thd->mem_root) Table_ident(unit);
               if (ti == NULL)
                 MYSQL_YYABORT;
               if (!($$= sel->add_table_to_list(lex->thd,
-                                               ti, $6, 0,
+                                               ti, $5, 0,
                                                TL_READ, MDL_SHARED_READ)))
 
                 MYSQL_YYABORT;
@@ -11053,11 +11060,11 @@ table_factor:
               lex->pop_context();
               lex->nest_level--;
             }
-            /*else if (($4->select_lex &&
-                      $4->select_lex->master_unit()->is_union() &&
-                      ($4->select_lex->master_unit()->first_select() ==
-                       $4->select_lex || !$4->lifted)) || $6)*/
-            else if ($6 != NULL)
+            /*else if (($3->select_lex &&
+                      $3->select_lex->master_unit()->is_union() &&
+                      ($3->select_lex->master_unit()->first_select() ==
+                       $3->select_lex || !$3->lifted)) || $5)*/
+            else if ($5 != NULL)
             {
               /*
                 Tables with or without joins within parentheses cannot
@@ -11070,7 +11077,7 @@ table_factor:
             {
               /* nested join: FROM (t1 JOIN t2 ...),
                  nest_level is the same as in the outer query */
-              $$= $4;
+              $$= $3;
             }
             /*
               Fields in derived table can be used in upper select in
@@ -11082,6 +11089,25 @@ table_factor:
                 !$$->derived->first_select()->next_select())
               $$->select_lex->add_where_field($$->derived->first_select());
           }
+          /* Represents derived table with WITH clause */
+        | '(' get_select_lex subselect_start
+              with_clause query_expression_body
+              subselect_end ')' opt_table_alias
+          {
+            LEX *lex=Lex;
+            SELECT_LEX *sel= $2;
+            SELECT_LEX_UNIT *unit= $5->master_unit();
+            Table_ident *ti= new (thd->mem_root) Table_ident(unit);
+            if (ti == NULL)
+              MYSQL_YYABORT;
+            $5->set_with_clause($4);
+            lex->current_select= sel;
+            if (!($$= sel->add_table_to_list(lex->thd,
+                                             ti, $8, 0,
+                                             TL_READ, MDL_SHARED_READ)))
+              MYSQL_YYABORT;
+            sel->add_joined_table($$);
+          } 
         ;
 
 /*
@@ -11158,25 +11184,25 @@ select_part2_derived:
 
 /* handle contents of parentheses in join expression */
 select_derived:
-          get_select_lex
+          get_select_lex_derived derived_table_list
           {
             LEX *lex= Lex;
-            if ($1->init_nested_join(lex->thd))
-              MYSQL_YYABORT;
-          }
-          derived_table_list
-          {
-            LEX *lex= Lex;
-            /* for normal joins, $3 != NULL and end_nested_join() != NULL,
+            /* for normal joins, $2 != NULL and end_nested_join() != NULL,
                for derived tables, both must equal NULL */
 
-            if (!($$= $1->end_nested_join(lex->thd)) && $3)
+            if (!($$= $1->end_nested_join(lex->thd)) && $2)
               MYSQL_YYABORT;
-            if (!$3 && $$)
+            if (!$2 && $$)
             {
               my_parse_error(thd, ER_SYNTAX_ERROR);
               MYSQL_YYABORT;
             }
+          }
+        | get_select_lex_derived table_ref_select
+          {
+            LEX *lex= Lex;
+            $$= $1->end_nested_join(lex->thd);
+            DBUG_ASSERT($$ == NULL);
           }
         ;
 
@@ -11210,6 +11236,15 @@ select_derived2:
 get_select_lex:
           /* Empty */ { $$= Select; }
         ;
+
+get_select_lex_derived:
+          get_select_lex
+          {
+            LEX *lex= Lex;
+            if ($1->init_nested_join(lex->thd))
+              MYSQL_YYABORT;
+          }
+       ;
 
 select_derived_init:
           SELECT_SYM
@@ -14014,7 +14049,6 @@ opt_with_clause:
 	| with_clause
           {
             $$= $1;
-            Lex->derived_tables|= DERIVED_WITH;
           }
 	;
 
@@ -14026,6 +14060,7 @@ with_clause:
              new With_clause($2, Lex->curr_with_clause);
              if (with_clause == NULL)
                MYSQL_YYABORT;
+             Lex->derived_tables|= DERIVED_WITH;
              Lex->curr_with_clause= with_clause;
              with_clause->add_to_list(Lex->with_clauses_list_last_next);
           }
@@ -16359,24 +16394,33 @@ union_option:
         | ALL       { $$=0; }
         ;
 
+/*
+  Corresponds to the SQL Standard
+  <query specification> ::=
+    SELECT [ <set quantifier> ] <select list> <table expression>
+
+  Notes:
+  - We allow more options in addition to <set quantifier>
+  - <table expression> is optional in MariaDB
+*/
+query_specification:
+          SELECT_SYM select_init2_derived opt_table_expression
+        ;
+
 query_term:
-          SELECT_SYM select_init2_derived
-          opt_table_expression
+          query_specification
           opt_order_clause
           opt_limit_clause
           opt_select_lock_type
-          {
-            $$= Lex->current_select->master_unit()->first_select();
-          }
         | '(' select_paren_derived ')'
           opt_union_order_or_limit
-          {
-            $$= Lex->current_select->master_unit()->first_select();
-          }
         ;
 
 query_expression_body:
           query_term
+          {
+            $$= Lex->current_select->master_unit()->first_select();
+          }
         | query_expression_body union_head_non_top query_term
           {
             Lex->pop_context();
@@ -16388,7 +16432,7 @@ query_expression_body:
 subselect:
           subselect_start opt_with_clause query_expression_body subselect_end
           { 
-	    $3->set_with_clause($2);
+            $3->set_with_clause($2);
             $$= $3;
           }
         ;
