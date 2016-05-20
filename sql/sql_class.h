@@ -1931,7 +1931,7 @@ public:
   static const char * const DEFAULT_WHERE;
 
 #ifdef EMBEDDED_LIBRARY
-  struct st_mysql  *mysql;
+  MYSQL *emb_mysql;
   unsigned long	 client_stmt_id;
   unsigned long  client_param_count;
   struct st_mysql_bind *client_params;
@@ -2331,9 +2331,9 @@ public:
 #ifndef __WIN__
   sigset_t signals;
 #endif
-#ifdef SIGNAL_WITH_VIO_CLOSE
+
   MYSQL *mysql;
-#endif
+
   /*
     This is to track items changed during execution of a prepared
     statement/stored procedure. It's created by
@@ -2929,7 +2929,7 @@ public:
   void cleanup_after_query();
   bool store_globals();
   void reset_globals();
-#ifdef SIGNAL_WITH_VIO_CLOSE
+
   inline void set_active_vio(MYSQL *mysql)
   {
     mysql_mutex_lock(&LOCK_thd_data);
@@ -2944,7 +2944,7 @@ public:
     mysql_mutex_unlock(&LOCK_thd_data);
   }
   void close_active_vio();
-#endif
+
   void awake(killed_state state_to_set);
  
   /** Disconnect the associated communication endpoint. */

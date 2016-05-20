@@ -1854,7 +1854,7 @@ void THD::awake(killed_state state_to_set)
   {
     if (this != current_thd)
     {
-      if (mysql)
+      if (mysql && mysql->net.vio)
         vio_shutdown(mysql->net.vio, SHUT_RDWR);
       else if(net.vio)
         vio_shutdown(net.vio, SHUT_RDWR);
@@ -1954,14 +1954,13 @@ void THD::disconnect()
 
   killed= KILL_CONNECTION;
 
-#ifdef SIGNAL_WITH_VIO_CLOSE
   /*
     Since a active vio might might have not been set yet, in
     any case save a reference to avoid closing a inexistent
     one or closing the vio twice if there is a active one.
   */
   close_active_vio();
-#endif
+
 
   /* Disconnect even if a active vio is not associated. */
   if (net.vio != vio)
