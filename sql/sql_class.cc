@@ -988,9 +988,8 @@ THD::THD(bool is_wsrep_applier)
                                     &variables.wt_timeout_short,
                                     &variables.wt_deadlock_search_depth_long,
                                     &variables.wt_timeout_long);
-#ifdef SIGNAL_WITH_VIO_CLOSE
-  active_vio = 0;
-#endif
+
+  mysql = 0;
   mysql_mutex_init(key_LOCK_thd_data, &LOCK_thd_data, MY_MUTEX_INIT_FAST);
   mysql_mutex_init(key_LOCK_wakeup_ready, &LOCK_wakeup_ready, MY_MUTEX_INIT_FAST);
   mysql_cond_init(key_COND_wakeup_ready, &COND_wakeup_ready, 0);
@@ -1853,13 +1852,14 @@ void THD::awake(killed_state state_to_set)
 
   if (state_to_set >= KILL_CONNECTION || state_to_set == NOT_KILLED)
   {
-#ifdef SIGNAL_WITH_VIO_CLOSE
     if (this != current_thd)
     {
-      if(active_vio)
-        vio_shutdown(active_vio, SHUT_RDWR);
+      if (mysql)
+        vio_shutdown(mysql->net.vio, SHUT_RDWR);
+      else if(net.vio)
+        vio_shutdown(net.vio, SHUT_RDWR);
+     
     }
-#endif
 
     /* Mark the target thread's alarm request expired, and signal alarm. */
     thr_alarm_kill(thread_id);
@@ -1960,7 +1960,6 @@ void THD::disconnect()
     any case save a reference to avoid closing a inexistent
     one or closing the vio twice if there is a active one.
   */
-  vio= active_vio;
   close_active_vio();
 #endif
 
@@ -2599,10 +2598,10 @@ void THD::close_active_vio()
   DBUG_ENTER("close_active_vio");
   mysql_mutex_assert_owner(&LOCK_thd_data);
 #ifndef EMBEDDED_LIBRARY
-  if (active_vio)
+  if (mysql)
   {
-    vio_close(active_vio);
-    active_vio = 0;
+    mysql_close(mysql);
+    mysql = 0;
   }
 #endif
   DBUG_VOID_RETURN;

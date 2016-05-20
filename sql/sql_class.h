@@ -45,6 +45,7 @@
 #include <mysql/psi/mysql_idle.h>
 #include <mysql/psi/mysql_table.h>
 #include <mysql_com_server.h>
+#include <mysql.h>
 
 extern "C"
 void set_thd_stage_info(void *thd,
@@ -2331,7 +2332,7 @@ public:
   sigset_t signals;
 #endif
 #ifdef SIGNAL_WITH_VIO_CLOSE
-  Vio* active_vio;
+  MYSQL *mysql;
 #endif
   /*
     This is to track items changed during execution of a prepared
@@ -2929,17 +2930,17 @@ public:
   bool store_globals();
   void reset_globals();
 #ifdef SIGNAL_WITH_VIO_CLOSE
-  inline void set_active_vio(Vio* vio)
+  inline void set_active_vio(MYSQL *mysql)
   {
     mysql_mutex_lock(&LOCK_thd_data);
-    active_vio = vio;
-    vio_set_thread_id(vio, pthread_self());
+    this->mysql = mysql;
+    //vio_set_thread_id(vio, pthread_self());
     mysql_mutex_unlock(&LOCK_thd_data);
   }
   inline void clear_active_vio()
   {
     mysql_mutex_lock(&LOCK_thd_data);
-    active_vio = 0;
+    mysql= 0;
     mysql_mutex_unlock(&LOCK_thd_data);
   }
   void close_active_vio();
