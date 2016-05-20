@@ -25,7 +25,6 @@
 #include <sql_common.h>
 #include <mysql/client_plugin.h>
 
-static void set_reconnect(MYSQL *mysql, my_bool reconnect);
 static my_bool get_reconnect(MYSQL *mysql);
 /*
   If non_blocking_api_enabled is true, we will re-define all the blocking
@@ -366,7 +365,7 @@ static MYSQL* client_connect(ulong flag, uint protocol, my_bool auto_reconnect)
     fprintf(stdout, "\n Check the connection options using --help or -?\n");
     exit(1);
   }
-  set_reconnect(mysql, auto_reconnect);
+  mysql_options(mysql, MYSQL_OPT_RECONNECT, &auto_reconnect);
 
   if (!opt_silent)
     fprintf(stdout, "OK");
@@ -1148,7 +1147,7 @@ static my_bool thread_query(const char *query)
 {
  MYSQL *l_mysql;
  my_bool error;
-
+ my_bool reconnect= 1;
  error= 0;
  if (!opt_silent)
  fprintf(stdout, "\n in thread_query(%s)", query);
@@ -1165,7 +1164,7 @@ static my_bool thread_query(const char *query)
    error= 1;
    goto end;
  }
- set_reconnect(l_mysql, 1);
+ mysql_options(l_mysql, MYSQL_OPT_RECONNECT, &reconnect);
  if (mysql_query(l_mysql, query))
  {
    fprintf(stderr, "Query failed (%s)\n", mysql_error(l_mysql));

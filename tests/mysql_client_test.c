@@ -34,25 +34,18 @@
 
 #include "mysql_client_fw.c"
 
+static const my_bool my_true= 1;
+
 #ifdef LIBMARIADB
+#undef simple_command
 #define simple_command(A,B,C,D,E) (A)->methods->db_command((A),(B),(const char *)(C),(D),(E), NULL);
 #endif
 
 /* Query processing */
 
-
-static void set_reconnect(MYSQL *mysql, my_bool reconnect)
-{
-#ifdef EMBEDDED_LIBRARY
-  mysql->reconnect = reconnect;
-#else
-  mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
-#endif
-}
-
 static my_bool get_reconnect(MYSQL *mysql)
 {
-#ifdef EMBEDDED_LIBRARY
+#ifndef LIBMARIADB
   return mysql->reconnect;
 #else
   my_bool reconnect;
@@ -4835,7 +4828,7 @@ static void test_stmt_close()
     myerror("connection failed");
     exit(1);
   }
-  set_reconnect(lmysql, 1);
+  mysql_options(lmysql, MYSQL_OPT_RECONNECT, &my_true);
   if (!opt_silent)
     fprintf(stdout, "OK");
 
@@ -5519,7 +5512,7 @@ DROP TABLE IF EXISTS test_multi_tab";
     fprintf(stdout, "\n connection failed(%s)", mysql_error(mysql_local));
     exit(1);
   }
-  set_reconnect(mysql_local, 1);
+  mysql_options(mysql_local, MYSQL_OPT_RECONNECT, &my_true);
 
   rc= mysql_query(mysql_local, query);
   myquery(rc);
@@ -5643,7 +5636,7 @@ static void test_prepare_multi_statements()
     fprintf(stderr, "\n connection failed(%s)", mysql_error(mysql_local));
     exit(1);
   }
-  set_reconnect(mysql_local, 1);
+  mysql_options(mysql_local, MYSQL_OPT_RECONNECT, &my_true);
   strmov(query, "select 1; select 'another value'");
   stmt= mysql_simple_prepare(mysql_local, query);
   check_stmt_r(stmt);
@@ -7251,7 +7244,7 @@ static void test_prepare_grant()
       mysql_close(lmysql);
       exit(1);
     }
-    set_reconnect(lmysql, 1);
+    mysql_options(lmysql, MYSQL_OPT_RECONNECT, &my_true);
     if (!opt_silent)
       fprintf(stdout, "OK");
 
@@ -7713,7 +7706,7 @@ static void test_drop_temp()
       mysql_close(lmysql);
       exit(1);
     }
-    set_reconnect(lmysql, 1);
+    mysql_options(lmysql, MYSQL_OPT_RECONNECT, &my_true);
     if (!opt_silent)
       fprintf(stdout, "OK");
 
@@ -15022,7 +15015,7 @@ static void test_bug15510()
 static void test_opt_reconnect()
 {
   MYSQL *lmysql;
-  my_bool my_true= TRUE;
+
 
   myheader("test_opt_reconnect");
 
