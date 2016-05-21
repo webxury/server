@@ -2332,7 +2332,9 @@ public:
   sigset_t signals;
 #endif
 
+#ifndef EMBEDDED_LIBRARY
   MYSQL *mysql;
+#endif
 
   /*
     This is to track items changed during execution of a prepared
@@ -2932,16 +2934,20 @@ public:
 
   inline void set_active_vio(MYSQL *mysql)
   {
+#ifndef EMBEDDED_LIBRARY
     mysql_mutex_lock(&LOCK_thd_data);
     this->mysql = mysql;
     //vio_set_thread_id(vio, pthread_self());
     mysql_mutex_unlock(&LOCK_thd_data);
+#endif
   }
   inline void clear_active_vio()
   {
+#ifndef EMBEDDED_LIBRARY
     mysql_mutex_lock(&LOCK_thd_data);
     mysql= 0;
     mysql_mutex_unlock(&LOCK_thd_data);
+#endif
   }
   void close_active_vio();
 

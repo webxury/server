@@ -988,8 +988,9 @@ THD::THD(bool is_wsrep_applier)
                                     &variables.wt_timeout_short,
                                     &variables.wt_deadlock_search_depth_long,
                                     &variables.wt_timeout_long);
-
+#ifndef EMBEDDED_LIBRARY
   mysql = 0;
+#endif
   mysql_mutex_init(key_LOCK_thd_data, &LOCK_thd_data, MY_MUTEX_INIT_FAST);
   mysql_mutex_init(key_LOCK_wakeup_ready, &LOCK_wakeup_ready, MY_MUTEX_INIT_FAST);
   mysql_cond_init(key_COND_wakeup_ready, &COND_wakeup_ready, 0);
@@ -1854,9 +1855,12 @@ void THD::awake(killed_state state_to_set)
   {
     if (this != current_thd)
     {
+#ifndef EMBEDDED_LIBRARY
       if (mysql && mysql->net.vio)
         vio_shutdown(mysql->net.vio, SHUT_RDWR);
-      else if(net.vio)
+      else
+#endif
+      if(net.vio)
         vio_shutdown(net.vio, SHUT_RDWR);
      
     }
