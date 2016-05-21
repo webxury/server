@@ -100,8 +100,7 @@ Ssl_cipher	AES128-SHA
 SHOW STATUS LIKE 'Ssl_cipher';
 Variable_name	Value
 Ssl_cipher	AES128-SHA
-mysqltest: Could not open connection 'default': 2026 SSL connection error: no cipher match
-CREATE TABLE t1(a int);
+mysqltest: Could not open connection 'default': 2026 SSL connection error: xxxxCREATE TABLE t1(a int);
 INSERT INTO t1 VALUES (1), (2);
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
