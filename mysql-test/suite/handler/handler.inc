@@ -1091,6 +1091,12 @@ connection default;
 --reap
 drop table t2;
 
+# This test expects "handler t1 read a next" to get blocked on table level
+# lock so that further "drop table t1" can break the lock and close handler.
+# This notification mechanism doesn't work with InnoDB since it bypasses
+# table level locks.
+if ($engine_type != 'InnoDB')
+{
 --echo # 
 --echo # Bug #46224 HANDLER statements within a transaction might 
 --echo #            lead to deadlocks
@@ -1150,6 +1156,7 @@ connection default;
 --error ER_NO_SUCH_TABLE
 --reap
 handler t1 close;
+}
 
 connection con1;
 disconnect con1;

@@ -545,7 +545,6 @@ optimize table t1;
 connection default;
 handler t1 read next;
 c1
-1
 handler t1 close;
 connection con2;
 Table	Op	Msg_type	Msg_text
@@ -1314,48 +1313,6 @@ unlock tables;
 connection default;
 # Reaping 'flush table t2'...
 drop table t2;
-# 
-# Bug #46224 HANDLER statements within a transaction might 
-#            lead to deadlocks
-#
-create table t1 (a int, key using btree (a));
-insert into t1 values (1), (2);
-connection default;
-begin;
-select * from t1;
-a
-1
-2
-handler t1 open;
-connection con1;
-# Sending:
-lock tables t1 write;
-connection con2;
-# Check that 'lock tables t1 write' waits until transaction which
-# has read from the table commits.
-connection default;
-# The below 'handler t1 read ...' should not be blocked as
-# 'lock tables t1 write' has not succeeded yet.
-handler t1 read a next;
-a
-1
-# Unblock 'lock tables t1 write'.
-commit;
-connection con1;
-# Reap 'lock tables t1 write'.
-connection default;
-# Sending:
-handler t1 read a next;
-connection con1;
-# Waiting for 'handler t1 read a next' to get blocked...
-# The below 'drop table t1' should be able to proceed without
-# waiting as it will force HANDLER to be closed.
-drop table t1;
-unlock tables;
-connection default;
-# Reaping 'handler t1 read a next'...
-ERROR 42S02: Table 'test.t1' doesn't exist
-handler t1 close;
 connection con1;
 disconnect con1;
 connection con2;

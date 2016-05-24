@@ -3267,17 +3267,6 @@ ha_innobase::init_table_handle_for_HANDLER(void)
 
 	innobase_register_trx(ht, user_thd, prebuilt->trx);
 
-	/* We did the necessary inits in this function, no need to repeat them
-	in row_search_for_mysql */
-
-	prebuilt->sql_stat_start = FALSE;
-
-	/* We let HANDLER always to do the reads as consistent reads, even
-	if the trx isolation level would have been specified as SERIALIZABLE */
-
-	prebuilt->select_lock_type = LOCK_NONE;
-	prebuilt->stored_select_lock_type = LOCK_NONE;
-
 	/* Always fetch all columns in the index record */
 
 	prebuilt->hint_need_to_fetch_extra_cols = ROW_RETRIEVE_ALL_COLS;
@@ -14520,6 +14509,9 @@ ha_innobase::start_stmt(
 			init_table_handle_for_HANDLER();
 			prebuilt->select_lock_type = LOCK_X;
 			prebuilt->stored_select_lock_type = LOCK_X;
+			/* We did the necessary inits in this function, no need to repeat them
+			in row_search_for_mysql */
+			prebuilt->sql_stat_start = FALSE;
 			error = row_lock_table_for_mysql(prebuilt, NULL, 1);
 
 			if (error != DB_SUCCESS) {
