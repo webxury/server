@@ -1367,7 +1367,7 @@ handle_rpl_parallel_thread(void *arg)
   thd->reset_query();
   thd->reset_db(NULL, 0);
   thd_proc_info(thd, "Slave worker thread exiting");
-  thd->temporary_tables= 0;
+  thd->reset_temporary_tables();
 
   THD_CHECK_SENTRY(thd);
   unlink_not_visible_thd(thd);

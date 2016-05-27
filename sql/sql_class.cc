@@ -37,7 +37,7 @@
 #include "tztime.h"                           // MYSQL_TIME <-> my_time_t
 #include "sql_acl.h"                          // NO_ACCESS,
                                               // acl_getroot_no_password
-#include "sql_base.h"                         // close_temporary_tables
+#include "sql_base.h"
 #include "sql_handler.h"                      // mysql_ha_cleanup
 #include "rpl_rli.h"
 #include "rpl_filter.h"
@@ -1465,6 +1465,10 @@ void THD::init(void)
   debug_sync_init_thread(this);
 #endif /* defined(ENABLED_DEBUG_SYNC) */
   apc_target.init(&LOCK_thd_data);
+
+  /* Initialize temporary tables */
+  temporary_tables.empty();
+
   DBUG_VOID_RETURN;
 }
 
@@ -1586,7 +1590,7 @@ void THD::cleanup(void)
   locked_tables_list.unlock_locked_tables(this);
 
   delete_dynamic(&user_var_events);
-  close_temporary_tables(this);
+  close_temporary_tables();
 
   transaction.xid_state.xa_state= XA_NOTR;
   trans_rollback(this);
@@ -4319,7 +4323,8 @@ void THD::restore_backup_open_tables_state(Open_tables_backup *backup)
     Before we will throw away current open tables state we want
     to be sure that it was properly cleaned up.
   */
-  DBUG_ASSERT(open_tables == 0 && temporary_tables == 0 &&
+  DBUG_ASSERT(open_tables == 0 &&
+              !has_temporary_tables() &&
               derived_tables == 0 &&
               lock == 0 &&
               locked_tables_mode == LTM_NONE &&
@@ -6979,24 +6984,6 @@ THD::signal_wakeup_ready()
   wakeup_ready= true;
   mysql_mutex_unlock(&LOCK_wakeup_ready);
   mysql_cond_signal(&COND_wakeup_ready);
-}
-
-
-void THD::rgi_lock_temporary_tables()
-{
-  mysql_mutex_lock(&rgi_slave->rli->data_lock);
-  temporary_tables= rgi_slave->rli->save_temporary_tables;
-}
-
-void THD::rgi_unlock_temporary_tables()
-{
-  rgi_slave->rli->save_temporary_tables= temporary_tables;
-  mysql_mutex_unlock(&rgi_slave->rli->data_lock);
-}
-
-bool THD::rgi_have_temporary_tables()
-{
-  return rgi_slave->rli->save_temporary_tables != 0;
 }
 
 
