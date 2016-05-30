@@ -2078,7 +2078,43 @@ public:
     if (var->type == OPT_SESSION && Sys_var_enum::session_update(thd, var))
       return TRUE;
     if (var->type == OPT_DEFAULT || !thd->in_active_multi_stmt_transaction())
+    {
+      Transaction_state_tracker *tst= NULL;
+
+      if (thd->variables.session_track_transaction_info > TX_TRACK_NONE)
+        tst= (Transaction_state_tracker *)
+          thd->session_tracker.get_tracker(TRANSACTION_INFO_TRACKER);
+
       thd->tx_isolation= (enum_tx_isolation) var->save_result.ulonglong_value;
+
+      if (var->type == OPT_DEFAULT)
+      {
+        enum enum_tx_isol_level l;
+        switch (thd->tx_isolation) {
+        case ISO_READ_UNCOMMITTED:
+          l=  TX_ISOL_UNCOMMITTED;
+          break;
+        case ISO_READ_COMMITTED:
+          l=  TX_ISOL_COMMITTED;
+          break;
+        case ISO_REPEATABLE_READ:
+          l= TX_ISOL_REPEATABLE;
+          break;
+        case ISO_SERIALIZABLE:
+          l= TX_ISOL_SERIALIZABLE;
+          break;
+        default:
+          DBUG_ASSERT(0);
+          return TRUE;
+        }
+        if (tst)
+          tst->set_isol_level(thd, l);
+      }
+      else if (tst)
+      {
+        tst->set_isol_level(thd, TX_ISOL_INHERIT);
+      }
+    }
     return FALSE;
   }
 };

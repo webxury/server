@@ -2755,6 +2755,9 @@ Locked_tables_list::init_locked_tables(THD *thd)
       return TRUE;
     }
   }
+
+  TRANSACT_TRACKER(add_trx_state(thd, TX_LOCKED_TABLES));
+
   thd->enter_locked_tables_mode(LTM_LOCK_TABLES);
 
   return FALSE;
@@ -2794,6 +2797,8 @@ Locked_tables_list::unlock_locked_tables(THD *thd)
       table_list->table->pos_in_locked_tables= NULL;
   }
   thd->leave_locked_tables_mode();
+
+  TRANSACT_TRACKER(clear_trx_state(thd, TX_LOCKED_TABLES));
 
   DBUG_ASSERT(thd->transaction.stmt.is_empty());
   close_thread_tables(thd);
@@ -5013,6 +5018,20 @@ static bool check_lock_and_start_stmt(THD *thd,
     table_list->table->file->print_error(error, MYF(0));
     DBUG_RETURN(1);
   }
+
+  /*
+    Record in transaction state tracking
+  */
+  if (thd->variables.session_track_transaction_info > TX_TRACK_NONE)
+  {
+    Transaction_state_tracker *tst= (Transaction_state_tracker *)
+      thd->session_tracker.get_tracker(TRANSACTION_INFO_TRACKER);
+    enum enum_tx_state s=
+      tst->calc_trx_state(thd, lock_type,
+                          table_list->table->file->has_transactions());
+    tst->add_trx_state(thd, s);
+  }
+
   DBUG_RETURN(0);
 }
 

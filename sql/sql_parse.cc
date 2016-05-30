@@ -5441,8 +5441,7 @@ end_with_restore_list:
     else
     {
       /* Reset the isolation level and access mode if no chaining transaction.*/
-      thd->tx_isolation= (enum_tx_isolation) thd->variables.tx_isolation;
-      thd->tx_read_only= thd->variables.tx_read_only;
+      trans_reset_one_shot_chistics(thd);
     }
     /* Disconnect the current client connection. */
     if (tx_release)
@@ -5489,8 +5488,7 @@ end_with_restore_list:
     else
     {
       /* Reset the isolation level and access mode if no chaining transaction.*/
-      thd->tx_isolation= (enum_tx_isolation) thd->variables.tx_isolation;
-      thd->tx_read_only= thd->variables.tx_read_only;
+      trans_reset_one_shot_chistics(thd);
     }
     /* Disconnect the current client connection. */
     if (tx_release)
@@ -5975,8 +5973,7 @@ end_with_restore_list:
       We've just done a commit, reset transaction
       isolation level and access mode to the session default.
     */
-    thd->tx_isolation= (enum_tx_isolation) thd->variables.tx_isolation;
-    thd->tx_read_only= thd->variables.tx_read_only;
+    trans_reset_one_shot_chistics(thd);
     my_ok(thd);
     break;
   }
@@ -5994,8 +5991,7 @@ end_with_restore_list:
       We've just done a rollback, reset transaction
       isolation level and access mode to the session default.
     */
-    thd->tx_isolation= (enum_tx_isolation) thd->variables.tx_isolation;
-    thd->tx_read_only= thd->variables.tx_read_only;
+    trans_reset_one_shot_chistics(thd);
     my_ok(thd);
     break;
   }
@@ -6213,6 +6209,9 @@ finish:
   {
     thd->mdl_context.release_statement_locks();
   }
+
+  TRANSACT_TRACKER(add_trx_state_from_thd(thd));
+
   WSREP_TO_ISOLATION_END;
 
 #ifdef WITH_WSREP
