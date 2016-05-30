@@ -3654,7 +3654,7 @@ DROP TABLE IF EXISTS t1;
 CREATE TABLE t1(a int);
 INSERT into t1 values (1), (2), (3);
 SELECT * FROM t1 LIMIT 2, -1;
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-1' at line 1
+ERROR 42000: Number can't be negative near '-1' at line 1
 DROP TABLE t1;
 CREATE TABLE t1 (
 ID_with_null int NULL,

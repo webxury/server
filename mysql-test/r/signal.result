@@ -596,7 +596,7 @@ ERROR 42000: Variable 'MYSQL_ERRNO' can't be set to the value of '4294967295'
 SIGNAL SQLSTATE 'HY000' SET MYSQL_ERRNO = 0;
 ERROR 42000: Variable 'MYSQL_ERRNO' can't be set to the value of '0'
 SIGNAL SQLSTATE 'HY000' SET MYSQL_ERRNO = -1;
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-1' at line 1
+ERROR 42000: Variable 'MYSQL_ERRNO' can't be set to the value of '-1'
 SIGNAL SQLSTATE 'HY000' SET MYSQL_ERRNO = 65535;
 ERROR 42000: Variable 'MYSQL_ERRNO' can't be set to the value of '65535'
 SIGNAL SQLSTATE 'HY000' SET MYSQL_ERRNO = 65534;

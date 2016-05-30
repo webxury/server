@@ -10,7 +10,7 @@ select hex(weight_string('aa' as char(3)));
 hex(weight_string('aa' as char(3)))
 414120
 select hex(weight_string('a' as char(-1)));
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-1)))' at line 1
+ERROR 42000: Number can't be negative near '-1)))' at line 1
 select hex(weight_string('a' as char(0)));
 ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '0)))' at line 1
 select hex(weight_string('a' as char(1)));

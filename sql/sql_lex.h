@@ -2137,6 +2137,13 @@ public:
     return (uint) (m_body_utf8_ptr - m_body_utf8);
   }
 
+  /* Don't allow negative numbers after idenitifiers */
+  void expect_operator()
+  {
+    if (next_state == MY_LEX_START)
+      next_state= MY_LEX_OPERATOR_OR_IDENT;
+  }
+
   /**
     Get the maximum length of the utf8-body buffer.
     The utf8 body can grow because of the character set conversion and escaping.

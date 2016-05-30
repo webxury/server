@@ -2817,7 +2817,7 @@ public:
   bool basic_const_item() const { return 1; }
   Item *clone_item(THD *thd);
   virtual void print(String *str, enum_query_type query_type);
-  Item_num *neg(THD *thd) { value= -value; return this; }
+  Item_num *neg(THD *thd);
   uint decimal_precision() const
   { return (uint) (max_length - MY_TEST(value < 0)); }
   bool eq(const Item *item, bool binary_cmp) const
@@ -2882,12 +2882,7 @@ public:
   bool basic_const_item() const { return 1; }
   Item *clone_item(THD *thd);
   virtual void print(String *str, enum_query_type query_type);
-  Item_num *neg(THD *thd)
-  {
-    my_decimal_neg(&decimal_value);
-    unsigned_flag= !decimal_value.sign();
-    return this;
-  }
+  Item_num *neg(THD *thd);
   uint decimal_precision() const { return decimal_value.precision(); }
   bool eq(const Item *, bool binary_cmp) const;
   void set_decimal_value(my_decimal *value_par);
@@ -2937,7 +2932,7 @@ public:
   my_decimal *val_decimal(my_decimal *);
   bool basic_const_item() const { return 1; }
   Item *clone_item(THD *thd);
-  Item_num *neg(THD *thd) { value= -value; return this; }
+  Item_num *neg(THD *thd);
   virtual void print(String *str, enum_query_type query_type);
   bool eq(const Item *item, bool binary_cmp) const
   { return real_eq(value, item); }

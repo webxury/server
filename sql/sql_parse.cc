@@ -9408,6 +9408,23 @@ Item *negate_expression(THD *thd, Item *expr)
   return new (thd->mem_root) Item_func_not(thd, expr);
 }
 
+
+/*
+  Change -(num) to -num.
+  This is to ensure that negative numbers in default are numerical constants
+  and not expressions. (Faster execution, less storage)
+*/
+
+Item *minus_expression(THD *thd, Item *expr)
+{
+  if (expr->basic_const_item() &&
+      (expr->type() == Item::INT_ITEM ||
+       expr->type() == Item::DECIMAL_ITEM ||
+       expr->type() == Item::REAL_ITEM))
+    return (((Item_num*) expr)->neg(thd));
+  return new (thd->mem_root) Item_func_neg(thd, expr);
+}
+
 /**
   Set the specified definer to the default value, which is the
   current user in the thread.

@@ -203,8 +203,6 @@ GET DIAGNOSTICS CONDITION 1 var1 = SUBCLASS_ORIGIN, var2 = CLASS_ORIGIN;
 END|
 DROP PROCEDURE p1;
 # Condition number expression
-GET DIAGNOSTICS CONDITION -1 @var = CLASS_ORIGIN;
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-1 @var = CLASS_ORIGIN' at line 1
 GET DIAGNOSTICS CONDITION 1+1 @var = CLASS_ORIGIN;
 ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '+1 @var = CLASS_ORIGIN' at line 1
 GET DIAGNOSTICS CONDITION ? @var = CLASS_ORIGIN;
@@ -215,6 +213,10 @@ GET DIAGNOSTICS CONDITION p1() @var = CLASS_ORIGIN;
 ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '() @var = CLASS_ORIGIN' at line 1
 GET DIAGNOSTICS CONDITION ABS(2) @var = CLASS_ORIGIN;
 ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '(2) @var = CLASS_ORIGIN' at line 1
+SELECT COUNT(max_questions) INTO @var FROM mysql.user;
+GET DIAGNOSTICS CONDITION -1 @var = CLASS_ORIGIN;
+Warnings:
+Error	1758	Invalid condition number
 GET DIAGNOSTICS CONDITION 1.1 @var = CLASS_ORIGIN;
 GET DIAGNOSTICS CONDITION "1" @var = CLASS_ORIGIN;
 SELECT COUNT(max_questions) INTO @var FROM mysql.user;

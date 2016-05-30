@@ -793,7 +793,7 @@ int
 internal_str2dec(const char *from, decimal_t *to, char **end, my_bool fixed)
 {
   const char *s= from, *s1, *endp, *end_of_string= *end;
-  int i, intg, frac, error, intg1, frac1;
+  int i, intg, frac, error, intg1, frac1, not_zero= 0;
   dec1 x,*buf;
   sanity(to);
 
@@ -877,12 +877,16 @@ internal_str2dec(const char *from, decimal_t *to, char **end, my_bool fixed)
     if (unlikely(++i == DIG_PER_DEC1))
     {
       *--buf=x;
+      not_zero|= x != 0;
       x=0;
       i=0;
     }
   }
   if (i)
+  {
     *--buf=x;
+      not_zero|= x != 0;
+  }
 
   buf=to->buf+intg1;
   for (x=0, i=0; frac; frac--)
@@ -892,13 +896,20 @@ internal_str2dec(const char *from, decimal_t *to, char **end, my_bool fixed)
     if (unlikely(++i == DIG_PER_DEC1))
     {
       *buf++=x;
+      not_zero|= x != 0;
       x=0;
       i=0;
     }
   }
   if (i)
+  {
     *buf=x*powers10[DIG_PER_DEC1-i];
+    not_zero|= x != 0;
+  }
 
+  if (!not_zero)
+    to->sign= 0;                                /* Zero doesn't have a sign */
+  
   /* Handle exponent */
   if (endp+1 < end_of_string && (*endp == 'e' || *endp == 'E'))
   {
@@ -1005,7 +1016,8 @@ static int ull2dec(ulonglong from, decimal_t *to)
     error=E_DEC_OVERFLOW;
   }
   to->frac=0;
-  to->intg=intg1*DIG_PER_DEC1;
+  /* intg can't be bigger than number of digits in a ulonglong (20) */
+  to->intg= MY_MIN(intg1*DIG_PER_DEC1, 20);
 
   for (buf=to->buf+intg1; intg1; intg1--)
   {

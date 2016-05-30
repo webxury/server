@@ -973,7 +973,7 @@ f_char2 CHAR(20),
 f_charbig VARCHAR(1000)
 )
 PARTITION BY HASH(f_int1) PARTITIONS -1;
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-1' at line 8
+ERROR 42000: Number can't be negative near '-1' at line 8
 CREATE TABLE t1 (
 f_int1 INTEGER DEFAULT 0,
 f_int2 INTEGER DEFAULT 0,
@@ -985,7 +985,7 @@ PARTITION BY RANGE(f_int1) SUBPARTITION BY HASH(f_int1)
 SUBPARTITIONS -1
 (PARTITION part1 VALUES LESS THAN (10),
 PARTITION part2 VALUES LESS THAN (2147483646));
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-1
+ERROR 42000: Number can't be negative near '-1
 (PARTITION part1 VALUES LESS THAN (10),
 PARTITION part2 VALUES LESS THAN (214' at line 9
 CREATE TABLE t1 (
@@ -1041,7 +1041,7 @@ f_char2 CHAR(20),
 f_charbig VARCHAR(1000)
 )
 PARTITION BY HASH(f_int1) PARTITIONS -2.0;
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-2.0' at line 8
+ERROR 42000: Only integers allowed as number here near '-2.0' at line 8
 CREATE TABLE t1 (
 f_int1 INTEGER DEFAULT 0,
 f_int2 INTEGER DEFAULT 0,
@@ -1053,7 +1053,7 @@ PARTITION BY RANGE(f_int1) SUBPARTITION BY HASH(f_int1)
 SUBPARTITIONS -2.0
 (PARTITION part1 VALUES LESS THAN (10),
 PARTITION part2 VALUES LESS THAN (2147483646));
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-2.0
+ERROR 42000: Only integers allowed as number here near '-2.0
 (PARTITION part1 VALUES LESS THAN (10),
 PARTITION part2 VALUES LESS THAN (2' at line 9
 CREATE TABLE t1 (
@@ -1202,7 +1202,7 @@ f_char2 CHAR(20),
 f_charbig VARCHAR(1000)
 )
 PARTITION BY HASH(f_int1) PARTITIONS -2.0E+0;
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-2.0E+0' at line 8
+ERROR 42000: Only integers allowed as number here near '-2.0E+0' at line 8
 CREATE TABLE t1 (
 f_int1 INTEGER DEFAULT 0,
 f_int2 INTEGER DEFAULT 0,
@@ -1214,7 +1214,7 @@ PARTITION BY RANGE(f_int1) SUBPARTITION BY HASH(f_int1)
 SUBPARTITIONS -2.0E+0
 (PARTITION part1 VALUES LESS THAN (10),
 PARTITION part2 VALUES LESS THAN (2147483646));
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-2.0E+0
+ERROR 42000: Only integers allowed as number here near '-2.0E+0
 (PARTITION part1 VALUES LESS THAN (10),
 PARTITION part2 VALUES LESS THAN' at line 9
 CREATE TABLE t1 (

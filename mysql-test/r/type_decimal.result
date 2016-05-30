@@ -221,7 +221,6 @@ drop  table t1;
 create table t1 (a decimal(10,2) unsigned);
 insert into t1 values ("0.0"),("-0.0"),("+0.0"),("01.0"),("+01.0"),("-01.0");
 Warnings:
-Warning	1264	Out of range value for column 'a' at row 2
 Warning	1264	Out of range value for column 'a' at row 6
 insert into t1 values ("-.1"),("+.1"),(".1");
 Warnings:
@@ -280,7 +279,6 @@ drop  table t1;
 create table t1 (a decimal(10,2) zerofill);
 insert into t1 values ("0.0"),("-0.0"),("+0.0"),("01.0"),("+01.0"),("-01.0");
 Warnings:
-Warning	1264	Out of range value for column 'a' at row 2
 Warning	1264	Out of range value for column 'a' at row 6
 insert into t1 values ("-.1"),("+.1"),(".1");
 Warnings:
@@ -473,11 +471,11 @@ a
 9999999999
 drop table t1;
 CREATE TABLE t1 (a_dec DECIMAL(-1,0));
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-1,0))' at line 1
+ERROR 42000: Too big precision -1 specified for 'a_dec'. Maximum is 65.
 CREATE TABLE t1 (a_dec DECIMAL(-2,1));
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-2,1))' at line 1
+ERROR 42000: Too big precision -1 specified for 'a_dec'. Maximum is 65.
 CREATE TABLE t1 (a_dec DECIMAL(-1,1));
-ERROR 42000: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '-1,1))' at line 1
+ERROR 42000: Too big precision -1 specified for 'a_dec'. Maximum is 65.
 CREATE TABLE t1 (a_dec DECIMAL(0,11));
 ERROR 42000: For float(M,D), double(M,D) or decimal(M,D), M must be >= D (column 'a_dec').
 create table t1(a decimal(7,3));

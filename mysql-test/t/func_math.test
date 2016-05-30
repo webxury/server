@@ -584,6 +584,11 @@ select 5.9 div 2, 1.23456789e3 DIV 2, 1.23456789e9 DIV 2, 1.23456789e19 DIV 2;
 --echo #
 SELECT STDDEV_POP(ROUND(0,@A:=2009)) FROM (SELECT 1 UNION SELECT 2) fake_table;
 
+--echo #
+--echo # Test zero
+--echo
+
+select 0=0, 0=-0, 0.0= -0.0, 0.0 = -(0.0), 0.0E1=-0.0E1, 0.0E1=-(0.0E1);
 
 --echo #
 --echo # End of 10.0 tests

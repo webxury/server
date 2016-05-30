@@ -1536,7 +1536,7 @@ err:
 
 
 /**
-  See Item_func_plus::decimal_op for comments.
+  See Item_func_minus::decimal_op for comments.
 */
 
 my_decimal *Item_func_minus::decimal_op(my_decimal *decimal_value)

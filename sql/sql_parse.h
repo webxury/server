@@ -122,6 +122,7 @@ void init_update_queries(void);
 bool check_simple_select();
 Item *normalize_cond(THD *thd, Item *cond);
 Item *negate_expression(THD *thd, Item *expr);
+Item *minus_expression(THD *thd, Item *expr);
 bool check_stack_overrun(THD *thd, long margin, uchar *dummy);
 
 /* Variables */

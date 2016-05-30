@@ -1293,7 +1293,7 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
   bool comment_closed;
   int	tokval, result_state;
   uint length;
-  enum my_lex_states state;
+  enum my_lex_states state, org_state;
   Lex_input_stream *lip= & thd->m_parser_state->m_lip;
   LEX *lex= thd->lex;
   CHARSET_INFO *const cs= thd->charset();
@@ -1304,12 +1304,13 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
 
   lip->start_token();
   state=lip->next_state;
+  org_state= state;
   lip->next_state=MY_LEX_OPERATOR_OR_IDENT;
   for (;;)
   {
     switch (state) {
     case MY_LEX_OPERATOR_OR_IDENT:	// Next is operator or keyword
-    case MY_LEX_START:			// Start of token
+    case MY_LEX_START:			// Start of token. May be signed num
       // Skip starting whitespace
       while(state_map[c= lip->yyPeek()] == MY_LEX_SKIP)
       {
@@ -1335,7 +1336,7 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
     case MY_LEX_CHAR:			// Unknown or single char token
     case MY_LEX_SKIP:			// This should not happen
       if (c != ')')
-	lip->next_state= MY_LEX_START;	// Allow signed numbers
+        lip->next_state= MY_LEX_START;	// Allow signed numbers
       return((int) c);
 
     case MY_LEX_MINUS_OR_COMMENT:
@@ -1346,8 +1347,24 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
         state=MY_LEX_COMMENT;
         break;
       }
-      lip->next_state= MY_LEX_START;	// Allow signed numbers
-      return((int) c);
+      /*
+        We use '-' as a signed number if:
+        - We accept numbers at this position (org_state == MY_LEX_START)
+        - First digit after '-' is a number that is not 0 followed by
+          a character (like 0x0 or 0b0)
+      */
+      if (org_state != MY_LEX_START || !my_isdigit(cs, lip->yyPeek()) ||
+          (lip->yyPeek() == '0' && my_isalpha(cs, lip->yyPeekn(1))))
+      {
+        /* Minus operator */
+        lip->next_state= MY_LEX_START;	// Allow signed numbers
+        return((int) c);
+      }
+      while (likely(my_isdigit(cs, (c = lip->yyGet())))) ;
+      state= (unlikely((c == 'e' || c == 'E')) ?
+              MY_LEX_REAL2 :
+              MY_LEX_INT_OR_REAL);
+      break;
 
     case MY_LEX_PLACEHOLDER:
       /*
@@ -1356,7 +1373,7 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
         its value in a query for the binlog, the query must stay
         grammatically correct.
       */
-      lip->next_state= MY_LEX_START;	// Allow signed numbers
+      lip->next_state= MY_LEX_OPERATOR_OR_IDENT;
       if (lip->stmt_prepare_mode && !ident_map[(uchar) lip->yyPeek()])
         return(PARAM_MARKER);
       return((int) c);
@@ -1505,7 +1522,7 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
       c= lip->yyGet();                          // should be '.'
       lip->next_state= MY_LEX_IDENT_START;      // Next is ident (not keyword)
       if (!ident_map[(uchar) lip->yyPeek()])    // Probably ` or "
-	lip->next_state= MY_LEX_START;
+	lip->next_state= MY_LEX_OPERATOR_OR_IDENT;
       return((int) c);
 
     case MY_LEX_NUMBER_IDENT:		// number or ident which num-start
@@ -1633,7 +1650,7 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
         yylval->lex_str=get_token(lip, 1, lip->yyLength() -1);
       if (c == quote_char)
         lip->yySkip();                  // Skip end `
-      lip->next_state= MY_LEX_START;
+      lip->next_state= MY_LEX_OPERATOR_OR_IDENT;
 
       lip->body_utf8_append(lip->m_cpp_text_start);
 
@@ -1650,7 +1667,8 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
       // fall through
     case MY_LEX_REAL:			// Incomplete real number
       while (my_isdigit(cs,c = lip->yyGet())) ;
-
+      // fall trough
+    case MY_LEX_REAL2:			// Incomplete real number
       if (c == 'e' || c == 'E')
       {
         c = lip->yyGet();
@@ -1763,7 +1781,7 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
       lex->select_lex.options|= OPTION_FOUND_COMMENT;
       while ((c = lip->yyGet()) != '\n' && c) ;
       lip->yyUnget();                   // Safety against eof
-      state = MY_LEX_START;		// Try again
+      state = MY_LEX_OPERATOR_OR_IDENT;	// Try again
       break;
     case MY_LEX_LONG_COMMENT:		/* Long C comment? */
       if (lip->yyPeek() != '*')
@@ -1827,7 +1845,7 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
             lip->yySkipn(length);
             /* Expand the content of the special comment as real code */
             lip->set_echo(TRUE);
-            state=MY_LEX_START;
+            state= MY_LEX_OPERATOR_OR_IDENT;
             break;  /* Do not treat contents as a comment.  */
           }
           else
@@ -1839,7 +1857,7 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
 	      thd->wsrep_consistency_check= CONSISTENCY_CHECK_DECLARED;
 	      lip->yySkipn(5);
 	      lip->set_echo(TRUE);
-	      state=MY_LEX_START;
+	      state= MY_LEX_OPERATOR_OR_IDENT;
 	      break;  /* Do not treat contents as a comment.  */
 	    }
 #endif /* WITH_WSREP */
@@ -1859,7 +1877,7 @@ static int lex_one_token(YYSTYPE *yylval, THD *thd)
         else
         {
           /* Not a version comment. */
-          state=MY_LEX_START;
+          state= MY_LEX_OPERATOR_OR_IDENT;
           lip->set_echo(TRUE);
           break;
         }

@@ -215,7 +215,7 @@ f_float_3_1_u	0.0
 set @value= 1e+1111111111;
 ERROR 22007: Illegal double '1e+1111111111' value found during parsing
 set @value= -1e+1111111111;
-ERROR 22007: Illegal double '1e+1111111111' value found during parsing
+ERROR 22007: Illegal double '-1e+1111111111' value found during parsing
 set @value= 1e+111;
 insert into t1 values(null,@value,@value,@value,@value,@value,@value,@value,@value,@value);
 Warnings:

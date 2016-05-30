@@ -942,7 +942,6 @@ bool LEX::set_bincmp(CHARSET_INFO *cs, bool bin)
      if (Lex->set_bincmp(X,Y))          \
        MYSQL_YYABORT;                   \
   } while(0)
-
 %}
 %union {
   int  num;
@@ -955,6 +954,8 @@ bool LEX::set_bincmp(CHARSET_INFO *cs, bool bin)
   LEX_SYMBOL symbol;
   struct sys_var_with_base variable;
   struct { int vars, conds, hndlrs, curs; } spblock;
+  struct { ulonglong num; int error; LEX_STRING str;} sign_int;
+
   Lex_length_and_dec_st Lex_length_and_dec;
   Lex_cast_type_st Lex_cast_type;
   Lex_field_type_st Lex_field_type;
@@ -1821,7 +1822,9 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         ws_level_range ws_level_list_or_range  
 
 %type <ulonglong_number>
-        ulonglong_num real_ulonglong_num size_number
+        ulonglong_num real_ulonglong_num size_number basic_ulonglong
+
+%type <sign_int> num_part
 
 %type <choice> choice
 
@@ -6446,8 +6449,8 @@ field_type:
             if ($2)
             {
               errno= 0;
-              ulong length= strtoul($2, NULL, 10);
-              if (errno == 0 && length <= MAX_FIELD_BLOBLENGTH && length != 4)
+              long length= strtoll($2, NULL, 10);
+              if (errno == 0 && length != 4)
               {
                 char buff[sizeof("YEAR()") + MY_INT64_NUM_DECIMAL_DIGITS + 1];
                 my_snprintf(buff, sizeof(buff), "YEAR(%lu)", length);
@@ -9468,7 +9471,7 @@ simple_expr:
           }
         | '-' simple_expr %prec NEG
           {
-            $$= new (thd->mem_root) Item_func_neg(thd, $2);
+            $$= minus_expression(thd, $2);
             if ($$ == NULL)
               MYSQL_YYABORT;
           }
@@ -11979,23 +11982,9 @@ limit_option:
         {
           $1->limit_clause_param= TRUE;
         }
-        | ULONGLONG_NUM
+        | basic_ulonglong
           {
-            $$= new (thd->mem_root) Item_uint(thd, $1.str, $1.length);
-            if ($$ == NULL)
-              MYSQL_YYABORT;
-          }
-        | LONG_NUM
-          {
-            $$= new (thd->mem_root) Item_uint(thd, $1.str, $1.length);
-            if ($$ == NULL)
-              MYSQL_YYABORT;
-          }
-        | NUM
-          {
-            $$= new (thd->mem_root) Item_uint(thd, $1.str, $1.length);
-            if ($$ == NULL)
-              MYSQL_YYABORT;
+            $$= new (thd->mem_root) Item_uint(thd, $1);
           }
         ;
 
@@ -12023,6 +12012,36 @@ delete_limit_clause:
        | LIMIT limit_option ROWS_SYM EXAMINED_SYM { my_parse_error(thd, ER_SYNTAX_ERROR); MYSQL_YYABORT; }
         ;
 
+basic_ulonglong:
+        num_part
+        {
+           /* Give error if signed number */
+           if ($1.error < 0)
+           {
+             my_parse_error(thd, ER_PARSE_EXPECTED_UNSIGNED_NUMBER);
+             MYSQL_YYABORT;
+           }
+           $$= $1.num;
+        }
+
+num_part:
+        NUM
+        {
+           $$.num= (ulonglong) my_strtoll10($1.str, (char**) 0, &$$.error);
+           $$.str= $1;
+         }
+        | LONG_NUM
+        {
+           $$.num= (ulonglong) my_strtoll10($1.str, (char**) 0, &$$.error);
+           $$.str= $1;
+         }
+        | ULONGLONG_NUM
+        {
+           $$.num= (ulonglong) my_strtoll10($1.str, (char**) 0, &$$.error);
+           $$.str= $1;
+           $$.error= 0; /* Always unsigned */           
+        }
+
 int_num:
           NUM           { int error; $$= (int) my_strtoll10($1.str, (char**) 0, &error); }
         | '-' NUM       { int error; $$= -(int) my_strtoll10($2.str, (char**) 0, &error); }
@@ -12030,35 +12049,27 @@ int_num:
         ;
 
 ulong_num:
-          NUM           { int error; $$= (ulong) my_strtoll10($1.str, (char**) 0, &error); }
+          basic_ulonglong { $$ = $1; }
         | HEX_NUM       { $$= (ulong) strtol($1.str, (char**) 0, 16); }
-        | LONG_NUM      { int error; $$= (ulong) my_strtoll10($1.str, (char**) 0, &error); }
-        | ULONGLONG_NUM { int error; $$= (ulong) my_strtoll10($1.str, (char**) 0, &error); }
         | DECIMAL_NUM   { int error; $$= (ulong) my_strtoll10($1.str, (char**) 0, &error); }
         | FLOAT_NUM     { int error; $$= (ulong) my_strtoll10($1.str, (char**) 0, &error); }
         ;
 
 real_ulong_num:
-          NUM           { int error; $$= (ulong) my_strtoll10($1.str, (char**) 0, &error); }
+          basic_ulonglong { $$ = (ulong) $1; }
         | HEX_NUM       { $$= (ulong) strtol($1.str, (char**) 0, 16); }
-        | LONG_NUM      { int error; $$= (ulong) my_strtoll10($1.str, (char**) 0, &error); }
-        | ULONGLONG_NUM { int error; $$= (ulong) my_strtoll10($1.str, (char**) 0, &error); }
         | dec_num_error { MYSQL_YYABORT; }
         ;
 
 ulonglong_num:
-          NUM           { int error; $$= (ulonglong) my_strtoll10($1.str, (char**) 0, &error); }
-        | ULONGLONG_NUM { int error; $$= (ulonglong) my_strtoll10($1.str, (char**) 0, &error); }
-        | LONG_NUM      { int error; $$= (ulonglong) my_strtoll10($1.str, (char**) 0, &error); }
+          basic_ulonglong { $$= $1; }
         | DECIMAL_NUM   { int error; $$= (ulonglong) my_strtoll10($1.str, (char**) 0, &error); }
         | FLOAT_NUM     { int error; $$= (ulonglong) my_strtoll10($1.str, (char**) 0, &error); }
         ;
 
 real_ulonglong_num:
-          NUM           { int error; $$= (ulonglong) my_strtoll10($1.str, (char**) 0, &error); }
-        | ULONGLONG_NUM { int error; $$= (ulonglong) my_strtoll10($1.str, (char**) 0, &error); }
+        basic_ulonglong { $$= $1; }
         | HEX_NUM       { $$= strtoull($1.str, (char**) 0, 16); }
-        | LONG_NUM      { int error; $$= (ulonglong) my_strtoll10($1.str, (char**) 0, &error); }
         | dec_num_error { MYSQL_YYABORT; }
         ;
 
@@ -14619,6 +14630,7 @@ ident:
             if ($$.str == NULL)
               MYSQL_YYABORT;
             $$.length= $1.length;
+            YYLIP->expect_operator();
           }
         ;
 
