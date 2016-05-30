@@ -1037,10 +1037,10 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 %parse-param { THD *thd }
 %lex-param { THD *thd }
 /*
-  Currently there are 104 shift/reduce conflicts.
+  Currently there are 102 shift/reduce conflicts.
   We should not introduce new conflicts any more.
 */
-%expect 104
+%expect 102
 
 /*
    Comments for TOKENS.
@@ -1783,8 +1783,8 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         udf_type opt_local opt_no_write_to_binlog
         opt_temporary all_or_any opt_distinct
         opt_ignore_leaves fulltext_options union_option
-        opt_not opt_union_order_or_limit
-        union_opt select_derived_init transaction_access_mode_types
+        opt_not
+        select_derived_init transaction_access_mode_types
         opt_natural_language_mode opt_query_expansion
         opt_ev_status opt_ev_on_completion ev_on_completion opt_ev_comment
         ev_alter_on_schedule_completion opt_ev_rename_to opt_ev_sql_stmt
@@ -1882,7 +1882,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         table_primary_ident table_primary_derived
         select_derived derived_table_list
         select_derived_union
-
+        derived_query_specification
 %type <date_time_type> date_time_type;
 %type <interval> interval
 
@@ -1921,7 +1921,11 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
 
 %type <select_lex> subselect
         get_select_lex get_select_lex_derived
+        query_specification
+        query_term_union_not_ready
+        query_term_union_ready
         query_expression_body
+        select_paren_derived
 
 %type <boolfunc2creator> comp_op
 
@@ -4940,7 +4944,11 @@ create_body:
           conflict that prevents the rule above from parsing a syntax like
           CREATE TABLE t1 (SELECT 1);
         */
-        | '(' create_select ')' { Select->set_braces(1);} union_opt {}
+        | '(' create_select_query_specification ')'
+        | '(' create_select_query_specification ')'
+          { Select->set_braces(1);} union_list {}
+        | '(' create_select_query_specification ')'
+          { Select->set_braces(1);} union_order_or_limit {}
         | create_like
           {
 
@@ -4961,12 +4969,21 @@ create_like:
 
 opt_create_select:
           /* empty */ {}
-        | opt_duplicate opt_as create_select
+        | opt_duplicate opt_as create_select_query_expression_body
+        ;
+
+create_select_query_expression_body:
+          SELECT_SYM create_select_part2 opt_table_expression
+          create_select_part4
           { Select->set_braces(0);}
-          union_clause {}
-        | opt_duplicate opt_as '(' create_select ')'
-          { Select->set_braces(1);}
-          union_opt {}
+          union_clause
+        | SELECT_SYM create_select_part2 create_select_part3_union_not_ready
+          create_select_part4
+        | '(' create_select_query_specification ')'
+        | '(' create_select_query_specification ')'
+          { Select->set_braces(1);} union_list {}
+        | '(' create_select_query_specification ')'
+          { Select->set_braces(1);} union_order_or_limit {}
         ;
 
 opt_create_partitioning:
@@ -5675,8 +5692,11 @@ opt_part_option:
  End of partition parser part
 */
 
-create_select:
-          SELECT_SYM
+create_select_query_specification:
+          SELECT_SYM create_select_part2 create_select_part3 create_select_part4
+        ;
+
+create_select_part2:
           {
             LEX *lex=Lex;
             if (lex->sql_command == SQLCOM_INSERT)
@@ -5695,18 +5715,19 @@ create_select:
           {
             Select->parsing_place= NO_MATTER;
           }
-          /*
-            TODO:
-            The following sequence repeats a few times:
-                  opt_table_expression
-                  opt_order_clause
-                  opt_limit_clause
-                  opt_select_lock_type
-            Perhaps they can be grouped into a dedicated rule.
-          */
+        ;
+
+create_select_part3:
           opt_table_expression
-          opt_order_clause
-          opt_limit_clause
+        | create_select_part3_union_not_ready
+        ;
+
+create_select_part3_union_not_ready:
+          table_expression order_or_limit
+        | order_or_limit
+        ;
+
+create_select_part4:
           opt_select_lock_type
           {
             /*
@@ -8521,7 +8542,16 @@ select:
 
 select_init:
           SELECT_SYM select_options_and_item_list select_init3
-        | '(' select_paren ')' union_opt
+        | '(' select_paren ')'
+        | '(' select_paren ')' union_list
+        | '(' select_paren ')' union_order_or_limit
+        ;
+
+union_list_part2:
+          SELECT_SYM select_options_and_item_list select_init3_union_query_term
+        | '(' select_paren_union_query_term ')'
+        | '(' select_paren_union_query_term ')' union_list
+        | '(' select_paren_union_query_term ')' union_order_or_limit
         ;
 
 select_paren:
@@ -8541,6 +8571,40 @@ select_paren:
         | '(' select_paren ')'
         ;
 
+select_paren_union_query_term:
+          {
+            /*
+              In order to correctly parse UNION's global ORDER BY we need to
+              set braces before parsing the clause.
+            */
+            Lex->current_select->set_braces(true);
+          }
+          SELECT_SYM select_options_and_item_list select_part3_union_query_term
+          opt_select_lock_type
+          {
+            if (setup_select_in_parentheses(Lex))
+              MYSQL_YYABORT;
+          }
+        | '(' select_paren_union_query_term ')'
+        ;
+
+select_paren_view:
+          {
+            /*
+              In order to correctly parse UNION's global ORDER BY we need to
+              set braces before parsing the clause.
+            */
+            Lex->current_select->set_braces(true);
+          }
+          SELECT_SYM select_options_and_item_list select_part3_view
+          opt_select_lock_type
+          {
+            if (setup_select_in_parentheses(Lex))
+              MYSQL_YYABORT;
+          }
+        | '(' select_paren_view ')'
+        ;
+
 /* The equivalent of select_paren for nested queries. */
 select_paren_derived:
           {
@@ -8554,8 +8618,9 @@ select_paren_derived:
           {
             if (setup_select_in_parentheses(Lex))
               MYSQL_YYABORT;
+            $$= Lex->current_select->master_unit()->first_select();
           }
-        | '(' select_paren_derived ')'
+        | '(' select_paren_derived ')'  { $$= $2; }
         ;
 
 select_init3:
@@ -8575,22 +8640,75 @@ select_init3:
         ;
 
 
-select_part3:
+select_init3_union_query_term:
           opt_table_expression
-        | select_part3_union_not_ready
+          opt_select_lock_type
+          {
+            /* Parentheses carry no meaning here */
+            Lex->current_select->set_braces(false);
+          }
+          union_clause
+        | select_part3_union_not_ready_noproc
+          opt_select_lock_type
+          {
+            /* Parentheses carry no meaning here */
+            Lex->current_select->set_braces(false);
+          }
+        ;
+
+
+select_init3_view:
+          opt_table_expression opt_select_lock_type
+          {
+            Lex->current_select->set_braces(false);
+          }
+        | opt_table_expression opt_select_lock_type
+          {
+            Lex->current_select->set_braces(false);
+          }
+          union_list_view
+        | order_or_limit opt_select_lock_type
+          {
+            Lex->current_select->set_braces(false);
+          }
+        | table_expression order_or_limit opt_select_lock_type
+          {
+            Lex->current_select->set_braces(false);
+          }
         ;
 
 /*
   The SELECT parts after select_item_list that cannot be followed by UNION.
 */
+
+select_part3:
+          opt_table_expression
+        | select_part3_union_not_ready
+        ;
+
+select_part3_union_query_term:
+          opt_table_expression
+        | select_part3_union_not_ready_noproc
+        ;
+
+select_part3_view:
+          opt_table_expression
+        | order_or_limit
+        | table_expression order_or_limit
+        ;
+
 select_part3_union_not_ready:
+          select_part3_union_not_ready_noproc
+        | table_expression procedure_clause
+        | table_expression order_or_limit procedure_clause
+        ;
+
+select_part3_union_not_ready_noproc:
           order_or_limit
         | into opt_table_expression opt_order_clause opt_limit_clause
         | table_expression into
-        | table_expression procedure_clause
         | table_expression order_or_limit
         | table_expression order_or_limit into
-        | table_expression order_or_limit procedure_clause
         ;
 
 select_options_and_item_list:
@@ -10990,23 +11108,6 @@ table_primary_ident:
           }
         ;
 
-table_ref_select:
-          select_derived_init get_select_lex select_derived2
-          {
-            LEX *lex= Lex;
-            SELECT_LEX *sel= lex->current_select;
-            if ($1)
-            {
-              if (sel->set_braces(1))
-              {
-                my_parse_error(thd, ER_SYNTAX_ERROR);
-                MYSQL_YYABORT;
-              }
-            }
-            if ($2->init_nested_join(lex->thd))
-              MYSQL_YYABORT;
-          }
-        ;
 
 
 /*
@@ -11130,29 +11231,39 @@ table_primary_derived:
   subqueries have their own union rules.
 */
 select_derived_union:
-          select_derived opt_union_order_or_limit
+          select_derived
+        | select_derived union_order_or_limit
           {
-            if ($1 && $2)
+            if ($1)
             {
               my_parse_error(thd, ER_SYNTAX_ERROR);
               MYSQL_YYABORT;
             }
           }
-        | select_derived_union union_head_non_top query_term
+        | select_derived union_head_non_top
           {
-            /*
-              Remove from the name resolution context stack the context of the
-              last select in the union.
-             */
-            Lex->pop_context();
+            if ($1)
+            {
+              my_parse_error(thd, ER_SYNTAX_ERROR);
+              MYSQL_YYABORT;
+            }
+          }
+          union_list_derived_part2
+        | derived_query_specification opt_select_lock_type
+        | derived_query_specification order_or_limit opt_select_lock_type
+        | derived_query_specification opt_select_lock_type union_list_derived
+       ;
 
-            if ($1 != NULL)
-            {
-              my_parse_error(thd, ER_SYNTAX_ERROR);
-              MYSQL_YYABORT;
-            }
-          }
-        ;
+union_list_derived_part2:
+         query_term_union_not_ready { Lex->pop_context(); }
+       | query_term_union_ready     { Lex->pop_context(); }
+       | query_term_union_ready     { Lex->pop_context(); } union_list_derived
+       ;
+
+union_list_derived:
+         union_head_non_top union_list_derived_part2
+       ;
+
 
 /* The equivalent of select_init2 for nested queries. */
 select_init2_derived:
@@ -11198,11 +11309,27 @@ select_derived:
               MYSQL_YYABORT;
             }
           }
-        | get_select_lex_derived table_ref_select
+        ;
+
+/*
+  Similar to query_specification, but for derived tables.
+  Example: the inner parenthesized SELECT in this query:
+    SELECT * FROM (SELECT * FROM t1);
+*/
+derived_query_specification:
+          SELECT_SYM select_derived_init select_derived2
           {
             LEX *lex= Lex;
-            $$= $1->end_nested_join(lex->thd);
-            DBUG_ASSERT($$ == NULL);
+            SELECT_LEX *sel= lex->current_select;
+            if ($2)
+            {
+              if (sel->set_braces(1))
+              {
+                my_parse_error(thd, ER_SYNTAX_ERROR);
+                MYSQL_YYABORT;
+              }
+            }
+            $$= NULL;
           }
         ;
 
@@ -11228,9 +11355,6 @@ select_derived2:
             Select->parsing_place= NO_MATTER;
           }
           opt_table_expression
-          opt_order_clause
-          opt_limit_clause
-          opt_select_lock_type
         ;
 
 get_select_lex:
@@ -11247,25 +11371,10 @@ get_select_lex_derived:
        ;
 
 select_derived_init:
-          SELECT_SYM
           {
             LEX *lex= Lex;
 
-            if (! lex->parsing_options.allows_derived)
-            {
-              my_error(ER_VIEW_SELECT_DERIVED, MYF(0));
-              MYSQL_YYABORT;
-            }
-
-            SELECT_LEX *sel= lex->current_select;
-            TABLE_LIST *embedding;
-            if (!sel->embedding || sel->end_nested_join(lex->thd))
-            {
-              /* we are not in parentheses */
-              my_parse_error(thd, ER_SYNTAX_ERROR);
-              MYSQL_YYABORT;
-            }
-            embedding= Select->embedding;
+            TABLE_LIST *embedding= lex->current_select->embedding;
             $$= embedding &&
                 !embedding->nested_join->join_list.elements;
             /* return true if we are deeply nested */
@@ -11968,18 +12077,7 @@ procedure_clause:
           {
             LEX *lex=Lex;
 
-            if (! lex->parsing_options.allows_select_procedure)
-            {
-              my_error(ER_VIEW_SELECT_CLAUSE, MYF(0), "PROCEDURE");
-              MYSQL_YYABORT;
-            }
-
-            if (&lex->select_lex != lex->current_select)
-            {
-              // SELECT * FROM t1 UNION SELECT * FROM t2 PROCEDURE ANALYSE();
-              my_error(ER_WRONG_USAGE, MYF(0), "PROCEDURE", "subquery");
-              MYSQL_YYABORT;
-            }
+            DBUG_ASSERT(&lex->select_lex == lex->current_select);
 
             lex->proc_list.elements=0;
             lex->proc_list.first=0;
@@ -12085,15 +12183,7 @@ select_outvar:
         ;
 
 into:
-          INTO
-          {
-            if (! Lex->parsing_options.allows_select_into)
-            {
-              my_error(ER_VIEW_SELECT_CLAUSE, MYF(0), "INTO");
-              MYSQL_YYABORT;
-            }
-          }
-          into_destination
+          INTO into_destination
         ;
 
 into_destination:
@@ -12462,12 +12552,7 @@ fields:
 insert_values:
           VALUES values_list {}
         | VALUE_SYM values_list {}
-        | create_select
-          { Select->set_braces(0);}
-          union_clause {}
-        | '(' create_select ')'
-          { Select->set_braces(1);}
-          union_opt {}
+        | create_select_query_expression_body {}
         ;
 
 values_list:
@@ -16331,7 +16416,7 @@ union_list:
             if (add_select_to_union_list(Lex, (bool)$2, TRUE))
               MYSQL_YYABORT;
           }
-          select_init
+          union_list_part2
           {
             /*
               Remove from the name resolution context stack the context of the
@@ -16341,15 +16426,17 @@ union_list:
           }
         ;
 
-union_opt:
-          opt_union_order_or_limit
-        | union_list { $$= 1; }
+union_list_view:
+          UNION_SYM union_option
+          {
+            if (add_select_to_union_list(Lex, (bool)$2, TRUE))
+              MYSQL_YYABORT;
+          }
+          query_expression_body_view
+          {
+            Lex->pop_context();
+          }
         ;
-
-opt_union_order_or_limit:
-          /* Empty */ { $$= 0; }
-	| union_order_or_limit { $$= 1; }
-	;
 
 union_order_or_limit:
           {
@@ -16405,27 +16492,25 @@ union_option:
 */
 query_specification:
           SELECT_SYM select_init2_derived opt_table_expression
-        ;
-
-query_term:
-          query_specification
-          opt_order_clause
-          opt_limit_clause
-          opt_select_lock_type
-        | '(' select_paren_derived ')'
-          opt_union_order_or_limit
-        ;
-
-query_expression_body:
-          query_term
           {
             $$= Lex->current_select->master_unit()->first_select();
           }
-        | query_expression_body union_head_non_top query_term
-          {
-            Lex->pop_context();
-            $$= $1;
-          }
+        ;
+
+query_term_union_not_ready:
+          query_specification order_or_limit opt_select_lock_type { $$= $1; }
+        | '(' select_paren_derived ')' union_order_or_limit       { $$= $2; }
+        ;
+
+query_term_union_ready:
+          query_specification opt_select_lock_type                { $$= $1; }
+        | '(' select_paren_derived ')'                            { $$= $2; }
+        ;
+
+query_expression_body:
+          query_term_union_not_ready                                { $$= $1; }
+        | query_term_union_ready                                    { $$= $1; }
+        | query_term_union_ready union_list_derived                 { $$= $1; }
         ;
 
 /* Corresponds to <query expression> in the SQL:2003 standard. */
@@ -16655,12 +16740,9 @@ view_select:
           {
             LEX *lex= Lex;
             lex->parsing_options.allows_variable= FALSE;
-            lex->parsing_options.allows_select_into= FALSE;
-            lex->parsing_options.allows_select_procedure= FALSE;
-            lex->parsing_options.allows_derived= FALSE;
             lex->create_view_select.str= (char *) YYLIP->get_cpp_ptr();
           }
-          opt_with_clause view_select_aux view_check_option
+          opt_with_clause query_expression_body_view view_check_option
           {
             LEX *lex= Lex;
             uint len= YYLIP->get_cpp_ptr() - lex->create_view_select.str;
@@ -16669,16 +16751,19 @@ view_select:
             lex->create_view_select.str= (char *) create_view_select;
             trim_whitespace(thd->charset(), &lex->create_view_select);
             lex->parsing_options.allows_variable= TRUE;
-            lex->parsing_options.allows_select_into= TRUE;
-            lex->parsing_options.allows_select_procedure= TRUE;
-            lex->parsing_options.allows_derived= TRUE;
             lex->current_select->set_with_clause($2);
           }
         ;
 
-view_select_aux:
-          SELECT_SYM select_options_and_item_list select_init3
-        | '(' select_paren ')' union_opt
+/*
+  SQL Standard <query expression body> for VIEWs.
+  Does not include INTO and PROCEDURE clauses.
+*/
+query_expression_body_view:
+          SELECT_SYM select_options_and_item_list select_init3_view
+        | '(' select_paren_view ')'
+        | '(' select_paren_view ')' union_order_or_limit
+        | '(' select_paren_view ')' union_list_view
         ;
 
 view_check_option:
