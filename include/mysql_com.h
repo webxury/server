@@ -218,7 +218,7 @@ enum enum_server_command
 /* Don't close the connection for a connection with expired password. */
 #define CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS (1UL << 22)
 
-#define CLIENT_PROGRESS (1UL << 29)
+#define CLIENT_PROGRESS_OBSOLETE (1UL << 29)
 #define CLIENT_SSL_VERIFY_SERVER_CERT (1UL << 30)
 /*
   It used to be that if mysql_real_connect() failed, it would delete any

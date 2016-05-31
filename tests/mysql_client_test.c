@@ -18747,7 +18747,7 @@ static void test_bug56976()
 }
 
 /*
-  Test that CLIENT_PROGRESS works.
+  Test that CLIENT_PROGRESS_OBSOLETE works.
 */
 
 uint progress_stage, progress_max_stage, progress_count;
@@ -18776,10 +18776,10 @@ static void test_progress_reporting()
   myheader("test_progress_reporting");
 
 
-  conn= client_connect(CLIENT_PROGRESS, MYSQL_PROTOCOL_TCP, 0);
-  if (!(conn->server_capabilities & CLIENT_PROGRESS))
+  conn= client_connect(CLIENT_PROGRESS_OBSOLETE, MYSQL_PROTOCOL_TCP, 0);
+  if (!(conn->server_capabilities & CLIENT_PROGRESS_OBSOLETE))
     return;
-  DIE_UNLESS(conn->client_flag & CLIENT_PROGRESS);
+  DIE_UNLESS(conn->client_flag & CLIENT_PROGRESS_OBSOLETE);
 
   mysql_options(conn, MYSQL_PROGRESS_CALLBACK, (void*) report_progress);
   rc= mysql_query(conn, "set @save=@@global.progress_report_time");
