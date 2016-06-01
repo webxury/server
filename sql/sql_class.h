@@ -2932,16 +2932,15 @@ public:
   bool store_globals();
   void reset_globals();
 
-  inline void set_active_vio(MYSQL *mysql)
+  inline void set_active_mysql(MYSQL *mysql)
   {
 #ifndef EMBEDDED_LIBRARY
     mysql_mutex_lock(&LOCK_thd_data);
     this->mysql = mysql;
-    //vio_set_thread_id(vio, pthread_self());
     mysql_mutex_unlock(&LOCK_thd_data);
 #endif
   }
-  inline void clear_active_vio()
+  inline void clear_active_mysql()
   {
 #ifndef EMBEDDED_LIBRARY
     mysql_mutex_lock(&LOCK_thd_data);
@@ -2949,7 +2948,7 @@ public:
     mysql_mutex_unlock(&LOCK_thd_data);
 #endif
   }
-  void close_active_vio();
+  void close_active_mysql();
 
   void awake(killed_state state_to_set);
  

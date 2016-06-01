@@ -1963,7 +1963,7 @@ void THD::disconnect()
     any case save a reference to avoid closing a inexistent
     one or closing the vio twice if there is a active one.
   */
-  close_active_vio();
+  close_active_mysql();
 
 
   /* Disconnect even if a active vio is not associated. */
@@ -2102,7 +2102,6 @@ bool THD::store_globals()
                               STACK_DIRECTION * (long)my_thread_stack_size;
   if (net.vio)
   {
-    vio_set_thread_id(net.vio, real_id);
     net.thd= this;
   }
   /*
@@ -2596,9 +2595,9 @@ void THD::make_explain_field_list(List<Item> &field_list, uint8 explain_flags,
 
 
 #ifdef SIGNAL_WITH_VIO_CLOSE
-void THD::close_active_vio()
+void THD::close_active_mysql()
 {
-  DBUG_ENTER("close_active_vio");
+  DBUG_ENTER("close_active_mysql");
   mysql_mutex_assert_owner(&LOCK_thd_data);
 #ifndef EMBEDDED_LIBRARY
   if (mysql)

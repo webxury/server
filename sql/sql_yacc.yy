@@ -737,13 +737,6 @@ bool setup_select_in_parentheses(LEX *lex)
     my_parse_error(lex->thd, ER_SYNTAX_ERROR);
     return TRUE;
   }
-  if (sel->linkage == UNION_TYPE &&
-      sel->olap != UNSPECIFIED_OLAP_TYPE &&
-      sel->master_unit()->fake_select_lex)
-  {
-    my_error(ER_WRONG_USAGE, MYF(0), "CUBE/ROLLUP", "ORDER BY");
-    return TRUE;
-  }
   return FALSE;
 }
 
@@ -10743,20 +10736,7 @@ opt_gconcat_separator:
 
 opt_gorder_clause:
           /* empty */
-        | ORDER_SYM BY
-          {
-            LEX *lex= Lex;
-            SELECT_LEX *sel= lex->current_select;
-            if (sel->linkage != GLOBAL_OPTIONS_TYPE &&
-                sel->olap != UNSPECIFIED_OLAP_TYPE &&
-                (sel->linkage != UNION_TYPE || sel->braces))
-            {
-              my_error(ER_WRONG_USAGE, MYF(0),
-                       "CUBE/ROLLUP", "ORDER BY");
-              MYSQL_YYABORT;
-            }
-          }
-         gorder_list;
+        | ORDER_SYM BY gorder_list;
         ;
 
 gorder_list:
