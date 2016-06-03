@@ -4755,7 +4755,7 @@ mysql_get_socket(const MYSQL *mysql)
 }
 
 
-int STDCALL mysql_cancel(const MYSQL *mysql)
+int STDCALL mysql_cancel(MYSQL *mysql)
 {
   if (mysql->net.vio)
 	return vio_shutdown(mysql->net.vio, SHUT_RDWR);
