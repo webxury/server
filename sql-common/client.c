@@ -4753,3 +4753,11 @@ mysql_get_socket(const MYSQL *mysql)
     return vio_fd(mysql->net.vio);
   return INVALID_SOCKET;
 }
+
+
+int STDCALL mysql_cancel(const MYSQL *mysql)
+{
+  if (mysql->net.vio)
+	return vio_shutdown(mysql->net.vio, SHUT_RDWR);
+  return -1;
+}

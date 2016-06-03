@@ -2333,7 +2333,7 @@ public:
 #endif
 
 #ifndef EMBEDDED_LIBRARY
-  MYSQL *mysql;
+  MYSQL *active_mysql;
 #endif
 
   /*
@@ -2932,11 +2932,11 @@ public:
   bool store_globals();
   void reset_globals();
 
-  inline void set_active_mysql(MYSQL *mysql)
+  inline void set_active_mysql(MYSQL *active_mysql)
   {
 #ifndef EMBEDDED_LIBRARY
     mysql_mutex_lock(&LOCK_thd_data);
-    this->mysql = mysql;
+    this->active_mysql= active_mysql;
     mysql_mutex_unlock(&LOCK_thd_data);
 #endif
   }
@@ -2944,7 +2944,7 @@ public:
   {
 #ifndef EMBEDDED_LIBRARY
     mysql_mutex_lock(&LOCK_thd_data);
-    mysql= 0;
+    active_mysql= 0;
     mysql_mutex_unlock(&LOCK_thd_data);
 #endif
   }

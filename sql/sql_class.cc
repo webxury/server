@@ -989,7 +989,7 @@ THD::THD(bool is_wsrep_applier)
                                     &variables.wt_deadlock_search_depth_long,
                                     &variables.wt_timeout_long);
 #ifndef EMBEDDED_LIBRARY
-  mysql = 0;
+  active_mysql= 0;
 #endif
   mysql_mutex_init(key_LOCK_thd_data, &LOCK_thd_data, MY_MUTEX_INIT_FAST);
   mysql_mutex_init(key_LOCK_wakeup_ready, &LOCK_wakeup_ready, MY_MUTEX_INIT_FAST);
@@ -1856,8 +1856,8 @@ void THD::awake(killed_state state_to_set)
     if (this != current_thd)
     {
 #ifndef EMBEDDED_LIBRARY
-      if (mysql && mysql->net.vio)
-        vio_shutdown(mysql->net.vio, SHUT_RDWR);
+      if (active_mysql)
+        mysql_cancel(active_mysql);
       else
 #endif
       if(net.vio)
@@ -2594,21 +2594,19 @@ void THD::make_explain_field_list(List<Item> &field_list, uint8 explain_flags,
 }
 
 
-#ifdef SIGNAL_WITH_VIO_CLOSE
 void THD::close_active_mysql()
 {
   DBUG_ENTER("close_active_mysql");
   mysql_mutex_assert_owner(&LOCK_thd_data);
 #ifndef EMBEDDED_LIBRARY
-  if (mysql)
+  if (active_mysql)
   {
-    mysql_close(mysql);
-    mysql = 0;
+    mysql_close(active_mysql);
+    active_mysql= 0;
   }
 #endif
   DBUG_VOID_RETURN;
 }
-#endif
 
 
 struct Item_change_record: public ilink

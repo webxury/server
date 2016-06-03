@@ -102,6 +102,7 @@ TARGET_LINK_LIBRARIES(async_example ${CLIENT_LIB})
 SET_TARGET_PROPERTIES (mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysqlslap mysql_plugin async_example
 PROPERTIES HAS_CXX TRUE)
 
+
 FOREACH(t mysql mysqltest mysqltest mysqlcheck mysqldump mysqlimport mysql_upgrade mysqlshow mysql_plugin mysqlbinlog
   mysqladmin mysqlslap async_example)
   ADD_DEPENDENCIES(${t} GenError mariadb_connector_c)
