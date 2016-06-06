@@ -4895,8 +4895,11 @@ err_during_init:
   /*
     TODO: see if we can do this conditionally in next_event() instead
     to avoid unneeded position re-init
+
+    We only reset THD::temporary_tables to 0 here and not free it, as this
+    could be used by slave through Relay_log_info::save_temporary_tables.
   */
-  thd->reset_temporary_tables();
+  thd->temporary_tables= 0;
   rli->sql_driver_thd= 0;
   thd->rgi_fake= thd->rgi_slave= NULL;
 
