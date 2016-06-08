@@ -447,7 +447,7 @@ innobase_need_rebuild(
 			}
 		}
 	}
-	
+
 	return(!!(ha_alter_info->handler_flags & INNOBASE_ALTER_REBUILD));
 }
 /** Check if virtual column in old and new table are in order, excluding
@@ -1975,6 +1975,7 @@ innobase_create_index_field_def(
 	ibool		is_unsigned;
 	ulint		col_type;
 	ulint		num_v = 0;
+	ulint		num_m_v = 0;
 
 	DBUG_ENTER("innobase_create_index_field_def");
 
@@ -1987,8 +1988,13 @@ innobase_create_index_field_def(
 	ut_a(field);
 
 	for (ulint i = 0; i < key_part->fieldnr; i++) {
-		if (innobase_is_v_fld(altered_table->field[i])) {
+		const Field*		field = altered_table->field[i];
+		if (innobase_is_v_fld(field)) {
 			num_v++;
+		}
+
+		if (!field->stored_in_db()) {
+			num_m_v++;
 		}
 	}
 
@@ -2002,7 +2008,7 @@ innobase_create_index_field_def(
 		index_field->col_no = num_v;
 	} else {
 		index_field->is_v_col = false;
-		index_field->col_no = key_part->fieldnr - num_v;
+		index_field->col_no = key_part->fieldnr - num_v - num_m_v;
 	}
 
 	if (DATA_LARGE_MTYPE(col_type)
@@ -3057,7 +3063,7 @@ found_col:
 	DBUG_ASSERT(i == altered_table->s->fields - num_v);
 
 	i = table->s->stored_fields;
-	i = table->s->fields - old_table->n_v_cols;
+	//i = table->s->fields - old_table->n_v_cols;
 
 	/* Add the InnoDB hidden FTS_DOC_ID column, if any. */
 	if (i + DATA_N_SYS_COLS < old_table->n_cols) {
@@ -4283,9 +4289,14 @@ prepare_inplace_alter_table_dict(
 		}
 	}
 	*/
-	/* There should be no order change for virtual columns coming in
-	here */
+	/*
+
+	JAN: TODO: MySQL 5.7 Virtual columns
+
+        There should be no order change for virtual columns coming in
+	here
 	ut_ad(check_v_col_in_order(old_table, altered_table, ha_alter_info));
+	*/
 
 	/* Create a background transaction for the operations on
 	the data dictionary tables. */
@@ -5776,32 +5787,34 @@ check_if_can_drop_indexes:
 			}
 		}
 
-		for (uint i = 0; i < n_drop_index; i++) {
-			dict_index_t*	index = drop_index[i];
+		if (m_prebuilt->trx->check_foreigns) {
+			for (uint i = 0; i < n_drop_index; i++) {
+				dict_index_t*	index = drop_index[i];
 
-			if (innobase_check_foreign_key_index(
-				ha_alter_info, index,
-				indexed_table, col_names,
-				m_prebuilt->trx, drop_fk, n_drop_fk)) {
-				row_mysql_unlock_data_dictionary(
-					m_prebuilt->trx);
-				m_prebuilt->trx->error_info = index;
-				print_error(HA_ERR_DROP_INDEX_FK,
-					    MYF(0));
+				if (innobase_check_foreign_key_index(
+						ha_alter_info, index,
+						indexed_table, col_names,
+						m_prebuilt->trx, drop_fk, n_drop_fk)) {
+					row_mysql_unlock_data_dictionary(
+						m_prebuilt->trx);
+					m_prebuilt->trx->error_info = index;
+					print_error(HA_ERR_DROP_INDEX_FK,
+						MYF(0));
+					goto err_exit;
+				}
+			}
+
+			/* If a primary index is dropped, need to check
+			any depending foreign constraints get affected */
+			if (drop_primary
+				&& innobase_check_foreign_key_index(
+					ha_alter_info, drop_primary,
+					indexed_table, col_names,
+					m_prebuilt->trx, drop_fk, n_drop_fk)) {
+				row_mysql_unlock_data_dictionary(m_prebuilt->trx);
+				print_error(HA_ERR_DROP_INDEX_FK, MYF(0));
 				goto err_exit;
 			}
-		}
-
-		/* If a primary index is dropped, need to check
-		any depending foreign constraints get affected */
-		if (drop_primary
-		    && innobase_check_foreign_key_index(
-			    ha_alter_info, drop_primary,
-			    indexed_table, col_names,
-			    m_prebuilt->trx, drop_fk, n_drop_fk)) {
-			row_mysql_unlock_data_dictionary(m_prebuilt->trx);
-			print_error(HA_ERR_DROP_INDEX_FK, MYF(0));
-			goto err_exit;
 		}
 
 		row_mysql_unlock_data_dictionary(m_prebuilt->trx);
@@ -6091,6 +6104,7 @@ ha_innobase::inplace_alter_table(
 	ut_ad(!rw_lock_own(dict_operation_lock, RW_LOCK_S));
 
 	DEBUG_SYNC(m_user_thd, "innodb_inplace_alter_table_enter");
+
 
 	if (!(ha_alter_info->handler_flags & INNOBASE_ALTER_DATA)) {
 ok_exit:

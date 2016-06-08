@@ -325,6 +325,8 @@ public:
 		ulonglong*		first_value,
 		ulonglong*		nb_reserved_values);
 
+	int reset_auto_increment(ulonglong value);
+
 	virtual bool get_error_message(int error, String *buf);
 
 	virtual bool get_foreign_dup_key(char*, uint, char*, uint);
@@ -497,6 +499,8 @@ private:
 	dberr_t innobase_set_max_autoinc(ulonglong auto_inc);
 
 	dberr_t innobase_get_autoinc(ulonglong* value);
+
+	dberr_t innobase_reset_autoinc(ulonglong auto_inc);
 
 	void innobase_initialize_autoinc();
 

@@ -984,6 +984,10 @@ dict_index_get_nth_col_or_prefix_pos(
 	ut_ad(index);
 	ut_ad(index->magic_n == DICT_INDEX_MAGIC_N);
 
+	if (prefix_col_pos) {
+		*prefix_col_pos = ULINT_UNDEFINED;
+	}
+
 	if (is_virtual) {
 		col = &(dict_table_get_nth_v_col(index->table, n)->m_col);
 	} else {
@@ -3049,6 +3053,7 @@ dict_index_add_col(
 	field = dict_index_get_nth_field(index, index->n_def - 1);
 
 	field->col = col;
+
 	/* DATA_POINT is a special type, whose fixed_len should be:
 	1) DATA_MBR_LEN, when it's indexed in R-TREE. In this case,
 	it must be the first col to be added.

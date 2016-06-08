@@ -1803,6 +1803,6 @@ sync_check_close()
 
 	create_tracker = NULL;
 
-	sync_latch_meta_destroy();
+	//sync_latch_meta_destroy();
 }
 

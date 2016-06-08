@@ -4776,9 +4776,14 @@ row_merge_build_indexes(
 			dup->col_map = col_map;
 			dup->n_dup = 0;
 
-			row_fts_psort_info_init(
-				trx, dup, new_table, opt_doc_id_size,
-				&psort_info, &merge_info);
+			/* This can fail e.g. if temporal files can't be
+			created */
+			if (!row_fts_psort_info_init(
+					trx, dup, new_table, opt_doc_id_size,
+					&psort_info, &merge_info)) {
+				error = DB_CORRUPTION;
+				goto func_exit;
+			}
 
 			/* We need to ensure that we free the resources
 			allocated */
@@ -5022,6 +5027,7 @@ wait_again:
 	}
 
 func_exit:
+
 	DBUG_EXECUTE_IF(
 		"ib_build_indexes_too_many_concurrent_trxs",
 		error = DB_TOO_MANY_CONCURRENT_TRXS;

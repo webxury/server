@@ -2582,9 +2582,7 @@ row_upd_clust_rec_by_insert(
 	que_thr_t*	thr,	/*!< in: query thread */
 	ibool		referenced,/*!< in: TRUE if index may be referenced in
 				a foreign key constraint */
-#ifdef WITH_WSREP
 	ibool		foreign, /*!< in: TRUE if index is foreign key index */
-#endif /* WITH_WSREP */
 	mtr_t*		mtr)	/*!< in/out: mtr; gets committed here */
 {
 	mem_heap_t*	heap;
@@ -2893,18 +2891,14 @@ row_upd_del_mark_clust_rec(
 	ibool		referenced,
 				/*!< in: TRUE if index may be referenced in
 				a foreign key constraint */
-#ifdef WITH_WSREP
 	ibool		foreign,/*!< in: TRUE if index is foreign key index */
-#endif /* WITH_WSREP */
 	mtr_t*		mtr)	/*!< in: mtr; gets committed here */
 {
 	btr_pcur_t*	pcur;
 	btr_cur_t*	btr_cur;
 	dberr_t		err;
-#ifdef WITH_WSREP
 	rec_t*		rec;
 	que_node_t *parent = que_node_get_parent(node);
-#endif /* WITH_WSREP */
 
 	ut_ad(node);
 	ut_ad(dict_index_is_clust(index));
@@ -2987,15 +2981,18 @@ row_upd_clust_step(
 	ulint*		offsets;
 	ibool		referenced;
 	ulint		flags	= 0;
+	ibool		foreign = FALSE;
+
 	rec_offs_init(offsets_);
 
 	index = dict_table_get_first_index(node->table);
 
 	referenced = row_upd_index_is_referenced(index, thr_get_trx(thr));
+
 #ifdef WITH_WSREP
-	ibool foreign = wsrep_row_upd_index_is_foreign(
+	foreign = wsrep_row_upd_index_is_foreign(
 		index, thr_get_trx(thr));
-#endif /* WITH_WSREP */
+#endif
 
 	pcur = node->pcur;
 
@@ -3101,6 +3098,7 @@ row_upd_clust_step(
 	if (node->is_delete) {
 		err = row_upd_del_mark_clust_rec(
 			flags, node, index, offsets, thr, referenced, foreign, &mtr);
+
 		if (err == DB_SUCCESS) {
 			node->state = UPD_NODE_UPDATE_ALL_SEC;
 			node->index = dict_table_get_next_index(index);

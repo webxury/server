@@ -263,7 +263,7 @@ row_fts_psort_info_init(
 			psort_info[j].merge_buf[i] = row_merge_buf_create(
 				dup->index);
 
-			if (row_merge_file_create(psort_info[j].merge_file[i])) {
+			if (row_merge_file_create(psort_info[j].merge_file[i]) < 0) {
 				goto func_exit;
 			}
 
@@ -276,6 +276,11 @@ row_fts_psort_info_init(
 				static_cast<row_merge_block_t*>(
 					ut_align(
 					psort_info[j].block_alloc[i], 1024));
+
+			if (!psort_info[j].merge_block[i]) {
+				ret = FALSE;
+				goto func_exit;
+			}
 
 			/* If tablespace is encrypted, allocate additional buffer for
 			encryption/decryption. */
@@ -298,11 +303,6 @@ row_fts_psort_info_init(
 			} else {
 				psort_info[j].crypt_alloc[i] = NULL;
 				psort_info[j].crypt_block[i] = NULL;
-			}
-
-			if (!psort_info[j].merge_block[i]) {
-				ret = FALSE;
-				goto func_exit;
 			}
 		}
 
@@ -406,7 +406,7 @@ int
 row_merge_fts_doc_add_word_for_parser(
 /*==================================*/
 	MYSQL_FTPARSER_PARAM	*param,		/* in: parser paramter */
-	char			*word,		/* in: token word */
+	const char		*word,		/* in: token word */
 	int			word_len,	/* in: word len */
 	MYSQL_FTPARSER_BOOLEAN_INFO*	boolean_info)	/* in: boolean info */
 {
@@ -423,7 +423,7 @@ row_merge_fts_doc_add_word_for_parser(
 	t_ctx = static_cast<fts_tokenize_ctx_t*>(param->mysql_ftparam);
 	ut_ad(t_ctx);
 
-	str.f_str = reinterpret_cast<byte*>(word);
+	str.f_str = (byte*)(word);
 	str.f_len = word_len;
 	str.f_n_char = fts_get_token_size(
 		(CHARSET_INFO*)param->cs, word, word_len);
@@ -470,9 +470,7 @@ row_merge_fts_doc_tokenize_by_parser(
 
 	/* Set paramters for param */
 	param.mysql_parse = fts_tokenize_document_internal;
-	/* JAN: TODO: MySQL 5.7 FTS Parser
 	param.mysql_add_word = row_merge_fts_doc_add_word_for_parser;
-	*/
 	param.mysql_ftparam = t_ctx;
 	param.cs = doc->charset;
 	param.doc = reinterpret_cast<char*>(doc->text.f_str);
@@ -1596,7 +1594,7 @@ row_fts_merge_insert(
 	fts_psort_insert_t	ins_ctx;
 	ulint			count_diag = 0;
 	fil_space_crypt_t*	crypt_data = NULL;
-	ulint			space;
+	ulint			space=0;
 	fts_table_t		fts_table;
 	char			aux_table_name[MAX_FULL_NAME_LEN];
 	dict_table_t*		aux_table;

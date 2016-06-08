@@ -2253,7 +2253,7 @@ dict_create_add_foreign_to_dictionary(
 				tablename, buf, fk_def);
 		}
 
-		return(error);
+		DBUG_RETURN(error);
 	}
 
 	for (ulint i = 0; i < foreign->n_fields; i++) {

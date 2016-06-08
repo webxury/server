@@ -1150,6 +1150,11 @@ trx_undo_page_report_modify(
 
 			const dict_col_t*	col
 				= dict_table_get_nth_col(table, col_no);
+			const char* col_name = dict_table_get_col_name(table,
+				col_no);
+
+			fprintf(stderr, "JAN: updaring col %p no %lu name %s ord %d\n",
+				col, col_no, col_name, col->ord_part);
 
 			if (col->ord_part) {
 				ulint			pos;
@@ -1166,6 +1171,11 @@ trx_undo_page_report_modify(
 				pos = dict_index_get_nth_col_pos(index,
 								 col_no,
 								 NULL);
+				if (pos == ULINT_UNDEFINED) {
+					fprintf(stderr, "JAN: failed to find col %p no %lu name %s\n",
+						col, col_no, col_name);
+				}
+
 				ptr += mach_write_compressed(ptr, pos);
 
 				/* Save the old value of field */

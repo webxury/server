@@ -4371,18 +4371,18 @@ loop:
 			}
 
 			if (corrupted) {
-			ib::fatal() << "Unable to read page " << page_id
-				<< " into the buffer pool after "
-				<< BUF_PAGE_READ_MAX_RETRIES << " attempts."
-				" The most probable cause of this error may"
-				" be that the table has been corrupted. Or,"
-				" the table was compressed with with an"
-				" algorithm that is not supported by this"
-				" instance. If it is not a decompress failure,"
-				" you can try to fix this problem by using"
-				" innodb_force_recovery."
-				" Please see " REFMAN " for more"
-				" details. Aborting...";
+				ib::fatal() << "Unable to read page " << page_id
+					    << " into the buffer pool after "
+					    << BUF_PAGE_READ_MAX_RETRIES << " attempts."
+					" The most probable cause of this error may"
+					" be that the table has been corrupted. Or,"
+					" the table was compressed with with an"
+					" algorithm that is not supported by this"
+					" instance. If it is not a decompress failure,"
+					" you can try to fix this problem by using"
+					" innodb_force_recovery."
+					" Please see " REFMAN " for more"
+					" details. Aborting...";
 			} else {
 				BPageMutex* pmutex = buf_page_get_mutex(bpage);
 
@@ -6089,7 +6089,7 @@ corrupt:
 					return(false);
 				} else {
 					corrupted = buf_page_check_corrupt(bpage);
-					
+
 					if (corrupted) {
 						ib::fatal()
 							<< "Aborting because of a"
