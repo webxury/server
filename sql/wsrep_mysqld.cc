@@ -567,7 +567,39 @@ int wsrep_init()
 
   wsrep_sst_auth_init(wsrep_sst_auth);
 
-  wsrep_causal_reads_update(&global_system_variables);
+  /*
+    On server start, there is no way to detect whether the default value
+    for a system variable was set explicitly by the user.
+    Now, since wsrep_causal_reads & wsrep_sync_wait are used for same
+    purpose, a rule of precedence must be defined to keep their values
+    in sync. It goes as following:
+
+    (1) If both are default/unset - Do nothing (both are in sync already)
+    (2) If wsrep_sync_wait is set - Update/override wsrep_causal_reads
+    (3) If wsrep_sync_wait is default/unset & wsrep_causal_reads is set
+                                  - Update wsrep_sync_wait
+
+    In general, on server start we prefer wsrep_sync_wait if it is set to
+    some non-default value.
+
+    During runtime, however, setting one of these variables should adjust
+    the other one accordingly.
+
+    Note: The above rules must be revisited if we decide to change the
+    defaults for these variables in future.
+  */
+  if (global_system_variables.wsrep_sync_wait == 0)
+  {
+    /* Update wsrep_sync_wait based on wsrep_causal_reads' value. */
+    wsrep_causal_reads_update(&global_system_variables);
+  }
+  else
+  {
+    /* wsrep_sync_wait is set, update wsrep_causal_reads accordingly. */
+    global_system_variables.wsrep_causal_reads =
+      MY_TEST(global_system_variables.wsrep_sync_wait &
+              WSREP_SYNC_WAIT_BEFORE_READ);
+  }
 
   wsrep_ready_set(FALSE);
   assert(wsrep_provider);
