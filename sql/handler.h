@@ -1636,7 +1636,8 @@ struct Schema_specification_st
 
 struct Table_scope_and_contents_source_st
 {
-  CHARSET_INFO *table_charset;
+  CHARSET_INFO *table_charset, *stored_expressions_charset,
+               *stored_expressions_collation;
   LEX_CUSTRING tabledef_version;
   LEX_STRING connect_string;
   const char *password, *tablespace;
@@ -1649,7 +1650,7 @@ struct Table_scope_and_contents_source_st
   ulong avg_row_length;
   ulong used_fields;
   ulong key_block_size;
-  ulong expression_lengths;
+  ulong expression_length;
   ulong field_check_constraints;
   /*
     number of pages to sample during
@@ -1691,10 +1692,7 @@ struct Table_scope_and_contents_source_st
   MDL_ticket *mdl_ticket;
   bool table_was_deleted;
 
-  void init()
-  {
-    bzero(this, sizeof(*this));
-  }
+  void init(THD *thd);
   bool tmp_table() const { return options & HA_LEX_CREATE_TMP_TABLE; }
   void use_default_db_type(THD *thd)
   {
@@ -1712,9 +1710,9 @@ struct Table_scope_and_contents_source_st
 struct HA_CREATE_INFO: public Table_scope_and_contents_source_st,
                        public Schema_specification_st
 {
-  void init()
+  void init(THD *thd)
   {
-    Table_scope_and_contents_source_st::init();
+    Table_scope_and_contents_source_st::init(thd);
     Schema_specification_st::init();
   }
   bool check_conflicting_charset_declarations(CHARSET_INFO *cs);
@@ -1755,14 +1753,14 @@ struct Table_specification_st: public HA_CREATE_INFO,
                                public DDL_options_st
 {
   // Deep initialization
-  void init()
+  void init(THD *thd)
   {
-    HA_CREATE_INFO::init();
+    HA_CREATE_INFO::init(thd);
     DDL_options_st::init();
   }
-  void init(DDL_options_st::Options options_arg)
+  void init(THD *thd, DDL_options_st::Options options_arg)
   {
-    HA_CREATE_INFO::init();
+    HA_CREATE_INFO::init(thd);
     DDL_options_st::init(options_arg);
   }
   /*

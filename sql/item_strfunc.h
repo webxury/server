@@ -562,10 +562,7 @@ class Item_func_sysconst :public Item_str_func
 public:
   Item_func_sysconst(THD *thd): Item_str_func(thd)
   { collation.set(system_charset_info,DERIVATION_SYSCONST); }
-  Item *safe_charset_converter(THD *thd, CHARSET_INFO *tocs)
-  {
-    return const_charset_converter(thd, tocs, true, fully_qualified_func_name());
-  }
+  Item *safe_charset_converter(THD *thd, CHARSET_INFO *tocs);
   /*
     Used to create correct Item name in new converted item in
     safe_charset_converter, return string representation of this function
@@ -599,6 +596,7 @@ class Item_func_user :public Item_func_sysconst
 {
 protected:
   query_id_t last_query_id;
+  String cached_value;
   bool init(THD *thd, const char *user, const char *host);
 
 public:

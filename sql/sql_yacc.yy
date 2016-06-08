@@ -965,6 +965,7 @@ Virtual_column_info *add_virtual_expression(THD *thd, char *txt,
    v->expr_str.str= (char* ) thd->strmake(txt, size);
    v->expr_str.length= size;
    v->expr_item= expr;
+   v->utf8= 0;  /* connection charset */
    return v;
 }
 
@@ -2569,7 +2570,7 @@ create:
           create_or_replace opt_temporary TABLE_SYM opt_if_not_exists table_ident
           {
             LEX *lex= thd->lex;
-            lex->create_info.init();
+            lex->create_info.init(thd);
             if (lex->set_command_with_check(SQLCOM_CREATE_TABLE, $2, $1 | $4))
                MYSQL_YYABORT;
             if (!lex->select_lex.add_table_to_list(thd, $5, NULL,
@@ -7276,7 +7277,7 @@ alter:
             Lex->sql_command= SQLCOM_ALTER_TABLE;
             Lex->duplicates= DUP_ERROR; 
             Lex->select_lex.init_order();
-            Lex->create_info.init();
+            Lex->create_info.init(thd);
             Lex->create_info.row_type= ROW_TYPE_NOT_USED;
             Lex->alter_info.reset();
             Lex->no_write_to_binlog= 0;
@@ -12992,7 +12993,7 @@ show:
             lex->ident=null_lex_str;
             mysql_init_select(lex);
             lex->current_select->parsing_place= SELECT_LIST;
-            lex->create_info.init();
+            lex->create_info.init(thd);
           }
           show_param
           {

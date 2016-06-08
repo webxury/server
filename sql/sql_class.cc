@@ -873,7 +873,7 @@ THD::THD(bool is_wsrep_applier)
    is_fatal_sub_stmt_error(false),
    rand_used(0),
    time_zone_used(0),
-   in_lock_tables(0),
+   in_lock_tables(0), in_stored_expression(0),
    bootstrap(0),
    derived_tables_processing(FALSE),
    waiting_on_group_commit(FALSE), has_waiter(FALSE),

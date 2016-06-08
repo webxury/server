@@ -1431,7 +1431,7 @@ public:
   ha_rows    cuted_fields, sent_row_count, examined_row_count;
   ulonglong client_capabilities;
   ulong query_plan_flags; 
-  uint in_sub_stmt;
+  uint in_sub_stmt;    /* 0,  SUB_STMT_TRIGGER or SUB_STMT_FUNCTION */
   bool enable_slow_log;
   bool last_insert_id_used;
   SAVEPOINT *savepoints;
@@ -2764,7 +2764,7 @@ public:
   bool       query_start_sec_part_used;
   /* for IS NULL => = last_insert_id() fix in remove_eq_conds() */
   bool       substitute_null_with_insert_id;
-  bool	     in_lock_tables;
+  bool	     in_lock_tables, in_stored_expression;
   bool       bootstrap, cleanup_done;
 
   /**  is set if some thread specific value(s) used in a statement. */

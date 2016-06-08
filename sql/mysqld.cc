@@ -4117,7 +4117,7 @@ static void my_malloc_size_cb_func(long long size, my_bool is_thread_specific)
     update_global_memory_status(size);
 #ifndef EMBEDDED_LIBRARY
     /*
-      Check if we have missed some mallocs. THis can't be done for embedded
+      Check if we have missed some mallocs. This can't be done for embedded
       server as the main code may have done calls to malloc before starting
       the embedded library.
     */
