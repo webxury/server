@@ -30,6 +30,9 @@
 #define IS_USER_TABLE(A) ((A->tmp_table == TRANSACTIONAL_TMP_TABLE) || \
                           (A->tmp_table == NON_TRANSACTIONAL_TMP_TABLE))
 
+#define HAS_TEMPORARY_TABLES ((!rgi_slave && has_temporary_tables()) || \
+                              (rgi_slave &&                             \
+                               unlikely(has_slave_temporary_tables())))
 
 /**
   Check whether temporary tables exist. The decision is made based on the
@@ -38,28 +41,11 @@
   @return false                       Temporary tables exist
           true                        No temporary table exist
 */
-bool THD::has_temporary_tables()
+inline bool THD::has_temporary_tables()
 {
   DBUG_ENTER("THD::has_temporary_tables");
   bool result= (temporary_tables && !temporary_tables->is_empty());
   DBUG_RETURN(result);
-}
-
-
-/**
-  Reset Open_tables_state::temporary_tables list.
-
-  @return void
-*/
-void THD::reset_temporary_tables()
-{
-  DBUG_ENTER("THD::reset_temporary_tables");
-  if (temporary_tables)
-  {
-    DBUG_ASSERT(temporary_tables->is_empty());
-    temporary_tables= NULL;
-  }
-  DBUG_VOID_RETURN;
 }
 
 
@@ -92,6 +78,20 @@ TABLE *THD::create_and_open_tmp_table(handlerton *hton,
   if ((share= create_temporary_table(hton, frm, path, db, table_name)))
   {
     table= open_temporary_table(share, table_name, open_in_engine);
+
+    /*
+      Failed to open a temporary table instance. As we are not passing
+      the created TMP_TABLE_SHARE to the caller, we must remove it from
+      the list and free it here.
+    */
+    if (!table)
+    {
+      /* Remove the TABLE_SHARE from the list of temporary tables. */
+      temporary_tables->remove(share);
+
+      /* Free the TMP_TABLE_SHARE. */
+      free_tmp_table_share(share, false);
+    }
   }
 
   DBUG_RETURN(table);
@@ -117,7 +117,7 @@ TABLE *THD::find_temporary_table(const char *db,
   uint key_length;
   bool locked;
 
-  if (!(has_temporary_tables() || (rgi_slave && has_slave_temporary_tables())))
+  if (!HAS_TEMPORARY_TABLES)
   {
     DBUG_RETURN(NULL);
   }
@@ -148,7 +148,7 @@ TABLE *THD::find_temporary_table(const TABLE_LIST *tl)
 {
   DBUG_ENTER("THD::find_temporary_table");
 
-  if (!(has_temporary_tables() || (rgi_slave && has_slave_temporary_tables())))
+  if (!HAS_TEMPORARY_TABLES)
   {
     DBUG_RETURN(NULL);
   }
@@ -178,7 +178,7 @@ TMP_TABLE_SHARE *THD::find_tmp_table_share_w_base_key(const char *key,
   TMP_TABLE_SHARE *result= NULL;
   bool locked;
 
-  if (!(has_temporary_tables() || (rgi_slave && has_slave_temporary_tables())))
+  if (!HAS_TEMPORARY_TABLES)
   {
     DBUG_RETURN(NULL);
   }
@@ -262,7 +262,7 @@ TMP_TABLE_SHARE *THD::find_tmp_table_share(const char *key, uint key_length)
   TMP_TABLE_SHARE *result= NULL;
   bool locked;
 
-  if (!(has_temporary_tables() || (rgi_slave && has_slave_temporary_tables())))
+  if (!HAS_TEMPORARY_TABLES)
   {
     DBUG_RETURN(NULL);
   }
@@ -348,8 +348,7 @@ bool THD::open_temporary_table(TABLE_LIST *tl)
   */
   DBUG_ASSERT(!tl->derived && !tl->schema_table);
 
-  if (tl->open_type == OT_BASE_ONLY ||
-      !(has_temporary_tables() || (rgi_slave && has_slave_temporary_tables())))
+  if (tl->open_type == OT_BASE_ONLY || !HAS_TEMPORARY_TABLES)
   {
     DBUG_PRINT("info", ("skip_temporary is set or no temporary tables"));
     DBUG_RETURN(false);
@@ -723,7 +722,7 @@ void THD::mark_tmp_tables_as_free_for_reuse()
     DBUG_VOID_RETURN;
   }
 
-  if (!(has_temporary_tables() || (rgi_slave && has_slave_temporary_tables())))
+  if (!HAS_TEMPORARY_TABLES)
   {
     DBUG_VOID_RETURN;
   }

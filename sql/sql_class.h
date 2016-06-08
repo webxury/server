@@ -4038,7 +4038,6 @@ public:
 /* Members related to temporary tables. */
 public:
   bool has_temporary_tables();
-  void reset_temporary_tables();
 
   TABLE *create_and_open_tmp_table(handlerton *hton,
                                    LEX_CUSTRING *frm,

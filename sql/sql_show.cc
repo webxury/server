@@ -4130,7 +4130,7 @@ fill_schema_table_by_open(THD *thd, bool is_show_fields_or_keys,
   if (is_show_fields_or_keys)
   {
     /*
-      Restore thd->all_temp_tables to be able to process
+      Restore thd->temporary_tables to be able to process
       temporary tables (only for 'show index' & 'show columns').
       This should be changed when processing of temporary tables for
       I_S tables will be done.
@@ -4217,7 +4217,7 @@ end:
     For safety reset list of open temporary tables before closing
     all tables open within this Open_tables_state.
   */
-  thd->reset_temporary_tables();
+  thd->temporary_tables= NULL;
 
   close_thread_tables(thd);
   /*
