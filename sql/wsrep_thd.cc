@@ -360,7 +360,7 @@ static void wsrep_replication_process(THD *thd)
   mysql_cond_broadcast(&COND_thread_count);
   mysql_mutex_unlock(&LOCK_thread_count);
 
-  if(thd->has_temporary_tables())
+  if(thd->has_thd_temporary_tables())
   {
     WSREP_WARN("Applier %lld has temporary tables at exit.",
                thd->thread_id);

@@ -3608,13 +3608,13 @@ public:
     */
     DBUG_PRINT("debug",
                ("temporary_tables: %s, in_sub_stmt: %s, system_thread: %s",
-                YESNO(has_temporary_tables()), YESNO(in_sub_stmt),
+                YESNO(has_thd_temporary_tables()), YESNO(in_sub_stmt),
                 show_system_thread(system_thread)));
     if (in_sub_stmt == 0)
     {
       if (wsrep_binlog_format() == BINLOG_FORMAT_ROW)
         set_current_stmt_binlog_format_row();
-      else if (!has_temporary_tables())
+      else if (!has_thd_temporary_tables())
         set_current_stmt_binlog_format_stmt();
     }
     DBUG_VOID_RETURN;
@@ -4037,7 +4037,7 @@ public:
 
 /* Members related to temporary tables. */
 public:
-  bool has_temporary_tables();
+  bool has_thd_temporary_tables();
 
   TABLE *create_and_open_tmp_table(handlerton *hton,
                                    LEX_CUSTRING *frm,
@@ -4081,7 +4081,7 @@ private:
     TMP_TABLE_ANY
   };
 
-  bool has_slave_temporary_tables();
+  bool has_temporary_tables();
   uint create_tmp_table_def_key(char *key, const char *db,
                                 const char *table_name);
   TMP_TABLE_SHARE *create_temporary_table(handlerton *hton, LEX_CUSTRING *frm,

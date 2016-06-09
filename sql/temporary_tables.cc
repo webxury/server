@@ -30,10 +30,6 @@
 #define IS_USER_TABLE(A) ((A->tmp_table == TRANSACTIONAL_TMP_TABLE) || \
                           (A->tmp_table == NON_TRANSACTIONAL_TMP_TABLE))
 
-#define HAS_TEMPORARY_TABLES ((!rgi_slave && has_temporary_tables()) || \
-                              (rgi_slave &&                             \
-                               unlikely(has_slave_temporary_tables())))
-
 /**
   Check whether temporary tables exist. The decision is made based on the
   existence of TMP_TABLE_SHAREs in Open_tables_state::temporary_tables list.
@@ -41,9 +37,9 @@
   @return false                       Temporary tables exist
           true                        No temporary table exist
 */
-bool THD::has_temporary_tables()
+bool THD::has_thd_temporary_tables()
 {
-  DBUG_ENTER("THD::has_temporary_tables");
+  DBUG_ENTER("THD::has_thd_temporary_tables");
   bool result= (temporary_tables && !temporary_tables->is_empty());
   DBUG_RETURN(result);
 }
@@ -117,7 +113,7 @@ TABLE *THD::find_temporary_table(const char *db,
   uint key_length;
   bool locked;
 
-  if (!HAS_TEMPORARY_TABLES)
+  if (!has_temporary_tables())
   {
     DBUG_RETURN(NULL);
   }
@@ -148,7 +144,7 @@ TABLE *THD::find_temporary_table(const TABLE_LIST *tl)
 {
   DBUG_ENTER("THD::find_temporary_table");
 
-  if (!HAS_TEMPORARY_TABLES)
+  if (!has_temporary_tables())
   {
     DBUG_RETURN(NULL);
   }
@@ -178,7 +174,7 @@ TMP_TABLE_SHARE *THD::find_tmp_table_share_w_base_key(const char *key,
   TMP_TABLE_SHARE *result= NULL;
   bool locked;
 
-  if (!HAS_TEMPORARY_TABLES)
+  if (!has_temporary_tables())
   {
     DBUG_RETURN(NULL);
   }
@@ -262,7 +258,7 @@ TMP_TABLE_SHARE *THD::find_tmp_table_share(const char *key, uint key_length)
   TMP_TABLE_SHARE *result= NULL;
   bool locked;
 
-  if (!HAS_TEMPORARY_TABLES)
+  if (!has_temporary_tables())
   {
     DBUG_RETURN(NULL);
   }
@@ -348,7 +344,7 @@ bool THD::open_temporary_table(TABLE_LIST *tl)
   */
   DBUG_ASSERT(!tl->derived && !tl->schema_table);
 
-  if (tl->open_type == OT_BASE_ONLY || !HAS_TEMPORARY_TABLES)
+  if (tl->open_type == OT_BASE_ONLY || !has_temporary_tables())
   {
     DBUG_PRINT("info", ("skip_temporary is set or no temporary tables"));
     DBUG_RETURN(false);
@@ -485,7 +481,7 @@ bool THD::close_temporary_tables()
 
   bool error= false;
 
-  if (!has_temporary_tables())
+  if (!has_thd_temporary_tables())
   {
     if (temporary_tables)
     {
@@ -722,7 +718,7 @@ void THD::mark_tmp_tables_as_free_for_reuse()
     DBUG_VOID_RETURN;
   }
 
-  if (!HAS_TEMPORARY_TABLES)
+  if (!has_temporary_tables())
   {
     DBUG_VOID_RETURN;
   }
@@ -851,19 +847,20 @@ void THD::restore_tmp_table_share(TMP_TABLE_SHARE *share)
 
 
 /**
-  Check whether slave temporary tables exist. The decision is made based on
-  the existence of TMP_TABLE_SHAREs in Relay_log_info::save_temporary_tables
-  list. Check THD::rgi_slave before calling this method.
+  If its a replication slave, report whether slave temporary tables
+  exist (Relay_log_info::save_temporary_tables) or report about THD
+  temporary table (Open_tables_state::temporary_tables) otherwise.
 
   @return false                       Temporary tables exist
           true                        No temporary table exist
 */
-inline bool THD::has_slave_temporary_tables()
+inline bool THD::has_temporary_tables()
 {
-  DBUG_ENTER("THD::has_slave_temporary_tables");
-  DBUG_ASSERT(rgi_slave);
-  bool result= (rgi_slave->rli->save_temporary_tables &&
-                !rgi_slave->rli->save_temporary_tables->is_empty());
+  DBUG_ENTER("THD::has_temporary_tables");
+  bool result= (rgi_slave
+                ? (rgi_slave->rli->save_temporary_tables &&
+                   !rgi_slave->rli->save_temporary_tables->is_empty())
+                : (has_thd_temporary_tables()));
   DBUG_RETURN(result);
 }
 
