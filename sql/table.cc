@@ -126,10 +126,7 @@ Default_object_creation_ctx::create_backup_ctx(THD *thd) const
 
 void Default_object_creation_ctx::change_env(THD *thd) const
 {
-  thd->variables.character_set_client= m_client_cs;
-  thd->variables.collation_connection= m_connection_cl;
-
-  thd->update_charset();
+  thd->update_charset(m_client_cs, m_connection_cl);
 }
 
 /**************************************************************************
@@ -2744,9 +2741,8 @@ Virtual_column_info *unpack_vcol_info_from_frm(THD *thd,
   */
   if (vcol->utf8)
   {
-    thd->variables.collation_connection=
-      table->s->stored_expressions_collation;
-    thd->variables.character_set_client= &my_charset_utf8mb4_general_ci;
+    thd->update_charset(&my_charset_utf8mb4_general_ci,
+                        table->s->stored_expressions_collation);
   }
   if (parse_sql(thd, &parser_state, NULL))
   {
@@ -2775,8 +2771,7 @@ end:
   if (vcol_arena)
     thd->restore_active_arena(vcol_arena, &backup_arena);
   end_lex_with_single_table(thd, table, old_lex);
-  thd->variables.character_set_client= save_character_set_client;
-  thd->variables.collation_connection= save_collation;
+  thd->update_charset(save_character_set_client, save_collation);
 
   DBUG_RETURN(vcol_info);
 }
