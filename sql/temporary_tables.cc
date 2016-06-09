@@ -41,7 +41,7 @@
   @return false                       Temporary tables exist
           true                        No temporary table exist
 */
-inline bool THD::has_temporary_tables()
+bool THD::has_temporary_tables()
 {
   DBUG_ENTER("THD::has_temporary_tables");
   bool result= (temporary_tables && !temporary_tables->is_empty());
