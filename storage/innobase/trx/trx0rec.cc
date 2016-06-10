@@ -1153,9 +1153,6 @@ trx_undo_page_report_modify(
 			const char* col_name = dict_table_get_col_name(table,
 				col_no);
 
-			fprintf(stderr, "JAN: updaring col %p no %lu name %s ord %d\n",
-				col, col_no, col_name, col->ord_part);
-
 			if (col->ord_part) {
 				ulint			pos;
 				col_spatial_status	spatial_status;
@@ -1172,8 +1169,13 @@ trx_undo_page_report_modify(
 								 col_no,
 								 NULL);
 				if (pos == ULINT_UNDEFINED) {
-					fprintf(stderr, "JAN: failed to find col %p no %lu name %s\n",
-						col, col_no, col_name);
+					ib::error() << "Column " << col_no
+						    << " name " << col_name
+						    << " not found from index " << index->name
+						    << " table. " << table->name
+						    << " Table has " << dict_table_get_n_cols(table)
+						    << " and index has " << dict_index_get_n_fields(index)
+						    << " fields.";
 				}
 
 				ptr += mach_write_compressed(ptr, pos);

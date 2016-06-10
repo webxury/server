@@ -77,7 +77,10 @@ Created 10/21/1995 Heikki Tuuri
 # include <linux/falloc.h>
 #endif /* HAVE_FALLOC_PUNCH_HOLE_AND_KEEP_SIZE */
 
+#ifdef HAVE_LZ4
 #include <lz4.h>
+#endif
+
 #include <zlib.h>
 
 #ifdef UNIV_DEBUG
@@ -1299,6 +1302,7 @@ os_file_compress_page(
 		break;
 	}
 
+#ifdef HAVE_LZ4
 	case Compression::LZ4:
 
 		len = LZ4_compress_limitedOutput(
@@ -1317,6 +1321,7 @@ os_file_compress_page(
 		}
 
 		break;
+#endif
 
 	default:
 		*dst_len = src_len;
@@ -1975,8 +1980,10 @@ os_file_compress_page(
 	ulint	n_alloc = *n * 2;
 
 	ut_a(n_alloc < UNIV_PAGE_SIZE_MAX * 2);
+#ifdef HAVE_LZ4
 	ut_a(type.compression_algorithm().m_type != Compression::LZ4
 	     || static_cast<ulint>(LZ4_COMPRESSBOUND(*n)) < n_alloc);
+#endif
 
 	byte*	ptr = reinterpret_cast<byte*>(ut_malloc_nokey(n_alloc));
 
@@ -8285,7 +8292,10 @@ os_file_set_umask(ulint umask)
 #include "fil0fil.h"
 #include "os0file.h"
 
+#ifdef HAVE_LZ4
 #include <lz4.h>
+#endif
+
 #include <zlib.h>
 
 #endif /* !UNIV_INNOCHECKSUM */

@@ -10,18 +10,6 @@
 #
 ##############################################################################
 
-innodb_bug60049 : MDEV-10158
-innodb_bug47167 : MDEV-10158
-innodb_file_format : MDEV-10158
-innodb_stats_create_on_corrupted : MDEV-10158
-innodb_stats_create_table : MDEV-10158
-innodb_stats_fetch : MDEV-10158
-innodb_stats_rename_table: MDEV-10158
-innodb_stats_fetch_nonexistent: MDEV-10158
-innodb_stats_fetch_corrupted: MDEV-10158
-innodb_stats_drop_locked : MDEV-10158
-innodb_stats: MDEV-10158
-innodb_stats_rename_table_if_exists : MDEV-10158
 innodb.auto_increment_dup : todo
 group_commit_binlog_pos : MDEV-10156
 group_commit_no_optimize_thread : MDEV-10156
@@ -29,6 +17,5 @@ group_commit: MDEV-10156
 group_commit_binlog_pos_no_optimize_thread : MDEV-10156
 group_commit_crash_no_optimize_thread : MDEV-10156
 group_commit_crash : MDEV-10156
-innodb_bug13510739 : MDEV-
-innodb_skip_innodb_is_tables : IS load
-
+innodb_skip_innodb_is_tables : MDEV-10200
+innodb.innodb_bug13510739: MDEV-10199
