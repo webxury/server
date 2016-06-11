@@ -7280,8 +7280,6 @@ os_aio_func(
 	    && !srv_use_native_aio
 #endif /* WIN_ASYNC_IO */
 	    ) {
-		ibool ret;
-
 		/* This is actually an ordinary synchronous read or write:
 		no need to use an i/o-handler thread. NOTE that if we use
 		Windows async i/o, Windows does not allow us to use
@@ -8435,7 +8433,6 @@ Compression::deserialize(
 		allocated = false;
 	}
 
-	int		ret;
 	Compression	compression;
 	ulint		len = header.m_original_size;
 
@@ -8461,7 +8458,8 @@ Compression::deserialize(
 		break;
 	}
 #ifdef HAVE_LZ4
-	case Compression::LZ4:
+	case Compression::LZ4: {
+		int		ret;
 
 		if (dblwr_recover) {
 
@@ -8496,6 +8494,7 @@ Compression::deserialize(
 		}
 
 		break;
+	}
 #endif
 	default:
 #if !defined(UNIV_INNOCHECKSUM)

@@ -92,7 +92,7 @@ support cross-platform development and expose comonly used SQL names. */
 
 /* JAN: TODO: missing 5.7 header */
 #ifdef HAVE_MY_THREAD_H
-# include <my_thread.h>
+//# include <my_thread.h>
 #endif
 
 # ifndef UNIV_INNOCHECKSUM

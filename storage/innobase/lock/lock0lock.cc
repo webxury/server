@@ -1708,7 +1708,8 @@ RecLock::jump_queue(lock_t* lock, const lock_t* wait_for, bool kill_trx)
 	ut_ad(m_trx == lock->trx);
 	ut_ad(trx_mutex_own(m_trx));
 	ut_ad(wait_for->trx != m_trx);
-	ut_ad(trx_is_high_priority(m_trx));
+	// JAN: TODO: trx priority
+	// ut_ad(trx_is_high_priority(m_trx));
 	ut_ad(m_rec_id.m_heap_no != ULINT32_UNDEFINED);
 
 	/* We need to change the hash bucket list pointers only. */

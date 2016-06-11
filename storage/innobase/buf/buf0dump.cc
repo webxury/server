@@ -27,7 +27,7 @@ Created April 08, 2011 Vasil Dimov
 #include "my_sys.h"
 /* JAN: TODO: missing MySQL 5.7 include */
 #ifdef HAVE_MY_THREAD_H
-#include "my_thread.h"
+// #include "my_thread.h"
 #endif
 
 #include "mysql/psi/mysql_stage.h"
