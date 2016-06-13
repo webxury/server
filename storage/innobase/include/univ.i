@@ -179,7 +179,7 @@ compiler sees the type in the translation unit. This default behaviour
 can cause the pointer to be a different size in different translation
 units, depending on the above rule. We force optimise for size behaviour
 for all cases. This is used by ut0lst.h related code. */
-# pragma pointers_to_members(full_generality, single_inheritance)
+# pragma pointers_to_members(full_generality, multiple_inheritance)
 #endif /* _WIN32 */
 
 /*			DEBUG VERSION CONTROL

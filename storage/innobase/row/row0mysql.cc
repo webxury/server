@@ -5351,7 +5351,7 @@ row_rename_table_for_mysql(
 		whether there exists table name in
 		system table whose name is
 		not being normalized to lower case */
-		normalize_table_name_low(
+		normalize_table_name_c_low(
 			par_case_name, old_name, FALSE);
 #endif
 		table = dict_table_open_on_name(par_case_name, dict_locked, FALSE,

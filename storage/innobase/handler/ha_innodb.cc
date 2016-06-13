@@ -5714,19 +5714,19 @@ ha_innobase::primary_key_is_clustered() const
 	return(true);
 }
 
-/** Normalizes a table name string.
-A normalized name consists of the database name catenated to '/'
-and table name. For example: test/mytable.
-On Windows, normalization puts both the database name and the
-table name always to lower case if "set_lower_case" is set to TRUE.
-@param[out]	norm_name	Normalized name, null-terminated.
-@param[in]	name		Name to normalize.
-@param[in]	set_lower_case	True if we also should fold to lower case. */
+/*********************************************************************
+Normalizes a table name string. A normalized name consists of the
+database name catenated to '/' and table name. An example:
+test/mytable. On Windows normalization puts both the database name and the
+table name always to lower case if "set_lower_case" is set to TRUE. */
 void
-create_table_info_t::normalize_table_name_low(
-	char*		norm_name,
-	const char*	name,
-	ibool		set_lower_case)
+normalize_table_name_c_low(
+/*=======================*/
+	char*           norm_name,      /* out: normalized name as a
+					null-terminated string */
+	const char*     name,           /* in: table name string */
+	ibool           set_lower_case) /* in: TRUE if we want to set
+					 name to lower case */
 {
 	char*	name_ptr;
 	ulint	name_len;
@@ -5777,6 +5777,23 @@ create_table_info_t::normalize_table_name_low(
 	if (set_lower_case) {
 		innobase_casedn_str(norm_name);
 	}
+}
+
+/** Normalizes a table name string.
+A normalized name consists of the database name catenated to '/'
+and table name. For example: test/mytable.
+On Windows, normalization puts both the database name and the
+table name always to lower case if "set_lower_case" is set to TRUE.
+@param[out]	norm_name	Normalized name, null-terminated.
+@param[in]	name		Name to normalize.
+@param[in]	set_lower_case	True if we also should fold to lower case. */
+void
+create_table_info_t::normalize_table_name_low(
+	char*		norm_name,
+	const char*	name,
+	ibool		set_lower_case)
+{
+	normalize_table_name_c_low(norm_name, name, set_lower_case);
 }
 
 #if !defined(DBUG_OFF)

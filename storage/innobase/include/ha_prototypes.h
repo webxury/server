@@ -585,8 +585,8 @@ database name catenated to '/' and table name. An example:
 test/mytable. On Windows normalization puts both the database name and the
 table name always to lower case if "set_lower_case" is set to TRUE. */
 void
-normalize_table_name_low(
-/*=====================*/
+normalize_table_name_c_low(
+/*=======================*/
 	char*		norm_name,	/*!< out: normalized name as a
 					null-terminated string */
 	const char*	name,		/*!< in: table name string */
