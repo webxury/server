@@ -135,7 +135,9 @@ static ulint	os_innodb_umask = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
 #else
 /** Umask for creating files */
 static ulint	os_innodb_umask	= 0;
+#ifndef ECANCELED
 #define ECANCELED  125
+#endif
 
 /* On Windows when using native AIO the number of AIO requests
 that a thread can handle at a given time is limited to 32
@@ -5112,7 +5114,7 @@ os_file_get_status_win32(
 	} else if (ret) {
 		/* file exists, but stat call failed */
 
-		os_file_handle_error_no_exit(path, "stat");
+		os_file_handle_error_no_exit(path, "STAT", false);
 
 		return(DB_FAIL);
 

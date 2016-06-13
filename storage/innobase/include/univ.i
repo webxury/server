@@ -138,7 +138,8 @@ resolved */
 # endif
 # define UNIV_PFS_THREAD
 
-# include "mysql/psi/psi.h" /* HAVE_PSI_MEMORY_INTERFACE */
+// JAN: TODO: MySQL 5.7 PSI
+// # include "mysql/psi/psi.h" /* HAVE_PSI_MEMORY_INTERFACE */
 # ifdef HAVE_PSI_MEMORY_INTERFACE
 #  define UNIV_PFS_MEMORY
 # endif /* HAVE_PSI_MEMORY_INTERFACE */

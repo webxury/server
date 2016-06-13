@@ -1,6 +1,7 @@
 /*****************************************************************************
 
 Copyright (c) 1996, 2015, Oracle and/or its affiliates. All Rights Reserved.
+Copyright (c) 2014, 2015, MariaDB Corporation
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -59,6 +60,13 @@ static const ulint	TABLE_LOCK_CACHE = 8;
 
 /** Size in bytes, of the table lock instance */
 static const ulint	TABLE_LOCK_SIZE = sizeof(ib_lock_t);
+
+/* Buffer to collect THDs to report waits for. */
+struct thd_wait_reports {
+	struct thd_wait_reports *next;	/*!< List link */
+	ulint used;			/*!< How many elements in waitees[] */
+	trx_t *waitees[64];		/*!< Trxs for thd_report_wait_for() */
+};
 
 /** Deadlock checker. */
 class DeadlockChecker {
@@ -865,6 +873,32 @@ lock_rec_has_to_wait(
 			other. */
 
 			return(FALSE);
+		}
+
+		if ((type_mode & LOCK_GAP || lock_rec_get_gap(lock2)) &&
+		    !thd_need_ordering_with(trx->mysql_thd,
+					    lock2->trx->mysql_thd)) {
+			/* If the upper server layer has already decided on the
+			commit order between the transaction requesting the
+			lock and the transaction owning the lock, we do not
+			need to wait for gap locks. Such ordeering by the upper
+			server layer happens in parallel replication, where the
+			commit order is fixed to match the original order on the
+			master.
+
+			Such gap locks are mainly needed to get serialisability
+			between transactions so that they will be binlogged in
+			the correct order so that statement-based replication
+			will give the correct results. Since the right order
+			was already determined on the master, we do not need
+			to enforce it again here.
+
+			Skipping the locks is not essential for correctness,
+			since in case of deadlock we will just kill the later
+			transaction and retry it. But it can save some
+			unnecessary rollbacks and retries. */
+
+			return (FALSE);
 		}
 
 		return(TRUE);
@@ -1998,8 +2032,11 @@ RecLock::add_to_waitq(const lock_t* wait_for, const lock_prdt_t* prdt)
 				char	buffer[1024];
 				THD*	thd = victim_trx->mysql_thd;
 
-				/*				ib::info() << "High priority transaction"
+				ib::info() << "High priority transaction"
 					" selected for rollback : "
+					   << thd_get_error_context_description(thd,
+						   buffer, sizeof(buffer), 512);
+				/* JAN: TODO: MySQL 5.7
 					<< thd_security_context(
 						thd, buffer, sizeof(buffer),
 						512);
@@ -7447,6 +7484,47 @@ DeadlockChecker::trx_rollback()
 	trx_mutex_exit(trx);
 }
 
+static
+void
+lock_report_waiters_to_mysql(
+/*=======================*/
+	struct thd_wait_reports*	waitee_buf_ptr,	/*!< in: set of trxs */
+	THD*				mysql_thd,	/*!< in: THD */
+	trx_id_t			victim_trx_id)	/*!< in: Trx selected
+							as deadlock victim, if
+							any */
+{
+	struct thd_wait_reports*	p;
+	struct thd_wait_reports*	q;
+	ulint				i;
+
+	p = waitee_buf_ptr;
+	while (p) {
+		i = 0;
+		while (i < p->used) {
+			trx_t *w_trx = p->waitees[i];
+			/*  There is no need to report waits to a trx already
+			selected as a victim. */
+			if (w_trx->id != victim_trx_id) {
+				/* If thd_report_wait_for() decides to kill the
+				transaction, then we will get a call back into
+				innobase_kill_query. We mark this by setting
+				current_lock_mutex_owner, so we can avoid trying
+				to recursively take lock_sys->mutex. */
+				w_trx->abort_type = TRX_REPLICATION_ABORT;
+				thd_report_wait_for(mysql_thd, w_trx->mysql_thd);
+				w_trx->abort_type = TRX_SERVER_ABORT;
+			}
+			++i;
+		}
+		q = p->next;
+		if (p != waitee_buf_ptr) {
+			ut_free(p);
+		}
+		p = q;
+	}
+}
+
 /** Checks if a joining lock request results in a deadlock. If a deadlock is
 found this function will resolve the deadlock by choosing a victim transaction
 and rolling it back. It will attempt to resolve all deadlocks. The returned
@@ -7465,12 +7543,34 @@ DeadlockChecker::check_and_resolve(const lock_t* lock, const trx_t* trx)
 	ut_ad(!srv_read_only_mode);
 
 	const trx_t*	victim_trx;
+	struct thd_wait_reports	waitee_buf;
+	struct thd_wait_reports*waitee_buf_ptr;
+	THD*			start_mysql_thd;
+
+	start_mysql_thd = trx->mysql_thd;
+	if (start_mysql_thd && thd_need_wait_for(start_mysql_thd)) {
+		waitee_buf_ptr = &waitee_buf;
+	} else {
+		waitee_buf_ptr = NULL;
+	}
 
 	/* Try and resolve as many deadlocks as possible. */
 	do {
 		DeadlockChecker	checker(trx, lock, s_lock_mark_counter);
 
+		if (waitee_buf_ptr) {
+			waitee_buf_ptr->next = NULL;
+			waitee_buf_ptr->used = 0;
+		}
+
 		victim_trx = checker.search();
+
+		/* Report waits to upper layer, as needed. */
+		if (waitee_buf_ptr) {
+			lock_report_waiters_to_mysql(waitee_buf_ptr,
+						     start_mysql_thd,
+						     victim_trx->id);
+		}
 
 		/* Search too deep, we rollback the joining transaction only
 		if it is possible to rollback. Otherwise we rollback the

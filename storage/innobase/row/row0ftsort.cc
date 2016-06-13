@@ -1083,7 +1083,7 @@ func_exit:
 	psort_info->child_status = FTS_CHILD_EXITING;
 
 #ifdef __WIN__
-	CloseHandle(psort_info->thread_hdl);
+	CloseHandle((HANDLE)psort_info->thread_hdl);
 #endif /*__WIN__ */
 
 	os_thread_exit(NULL);

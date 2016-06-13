@@ -30,6 +30,7 @@ Created 2012-09-23 Sunny Bains
 
 #ifdef _WIN32
 #include <windows.h>
+#include <synchapi.h>
 #endif /* _WIN32 */
 
 #include <list>

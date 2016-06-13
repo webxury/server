@@ -185,10 +185,12 @@ void *mtflush_ctx=NULL;
 static os_thread_t	thread_handles[SRV_MAX_N_IO_THREADS + 6 + 32];
 static os_thread_t	buf_dump_thread_handle;
 static os_thread_t	dict_stats_thread_handle;
+static os_thread_t	buf_flush_page_cleaner_thread_handle;
 /** Status variables, is thread started ?*/
 static bool		thread_started[SRV_MAX_N_IO_THREADS + 6 + 32] = {false};
 static bool		buf_dump_thread_started = false;
 static bool		dict_stats_thread_started = false;
+static bool		buf_flush_page_cleaner_thread_started = false;
 
 /** Name of srv_monitor_file */
 static char*	srv_monitor_file_name;
@@ -2872,7 +2874,7 @@ innobase_shutdown_for_mysql(void)
 	On Windows we should call CloseHandle() for all
 	open thread handles. */
 	if (os_thread_count == 0) {
-		for (i = 0; i < SRV_MAX_N_IO_THREADS + 6 + 32; ++i) {
+		for (int i = 0; i < SRV_MAX_N_IO_THREADS + 6 + 32; ++i) {
 			if (thread_started[i]) {
 				CloseHandle(thread_handles[i]);
 			}

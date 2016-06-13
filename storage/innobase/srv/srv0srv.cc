@@ -42,9 +42,9 @@ Created 10/8/1995 Heikki Tuuri
 #include "my_global.h"
 // JAN: TODO: MySQL 5.7 missing header
 //#include "my_thread.h"
-
-#include "mysql/psi/mysql_stage.h"
-#include "mysql/psi/psi.h"
+//
+// #include "mysql/psi/mysql_stage.h"
+// #include "mysql/psi/psi.h"
 // JAN: TODO: MySQL 5.7 missing header
 //#include "sql_thd_internal_api.h"
 
