@@ -1788,7 +1788,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, ulong *yystacksize);
         table_ident_opt_wild create_like
 
 %type <simple_string>
-        remember_name remember_end opt_db remember_cur_pos remember_prev_pos
+        remember_name remember_end opt_db remember_cur_pos
         remember_tok_start
         wild_and_where
         field_length opt_field_length opt_field_length_default_1
@@ -8987,11 +8987,6 @@ remember_tok_start:
 remember_cur_pos:
           {
             $$= (char*) YYLIP->get_cpp_ptr();
-          }
-
-remember_prev_pos:
-          {
-            $$= (char*) YYLIP->get_cpp_start_prev();
           }
         ;
 
