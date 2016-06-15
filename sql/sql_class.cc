@@ -1420,7 +1420,7 @@ void THD::init(void)
 			TL_WRITE);
   tx_isolation= (enum_tx_isolation) variables.tx_isolation;
   tx_read_only= variables.tx_read_only;
-  update_charset();
+  update_charset();             // plugin_thd_var() changed character sets
   reset_current_stmt_binlog_format_row();
   reset_binlog_local_stmt_filter();
   set_status_var_init();
@@ -2251,12 +2251,19 @@ bool THD::convert_string(LEX_STRING *to, CHARSET_INFO *to_cs,
 {
   DBUG_ENTER("THD::convert_string");
   size_t new_length= to_cs->mbmaxlen * from_length;
-  uint dummy_errors;
+  uint errors;
   if (alloc_lex_string(to, new_length + 1))
     DBUG_RETURN(true);                          // EOM
   to->length= copy_and_convert((char*) to->str, new_length, to_cs,
-			       from, from_length, from_cs, &dummy_errors);
+			       from, from_length, from_cs, &errors);
   to->str[to->length]= 0;                       // Safety
+  if (errors && in_stored_expression)
+  {
+    my_error(ER_BAD_DATA, MYF(0), 
+             ErrConvString(from, from_length, from_cs).ptr(),
+             to_cs->csname);
+    DBUG_RETURN(true);
+  }
   DBUG_RETURN(false);
 }
 

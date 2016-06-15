@@ -571,8 +571,8 @@ class Item_num_op :public Item_func_numhybrid
   {
     print_op(str, query_type);
   }
-
   void fix_length_and_dec();
+  bool need_parentesis_in_default() { return true; }
 };
 
 
@@ -636,6 +636,7 @@ public:
   }
   virtual void print(String *str, enum_query_type query_type);
   uint decimal_precision() const { return args[0]->decimal_precision(); }
+  bool need_parentesis_in_default() { return true; }
 };
 
 
@@ -672,6 +673,7 @@ public:
   void fix_length_and_dec() {}
   const char *func_name() const { return "decimal_typecast"; }
   virtual void print(String *str, enum_query_type query_type);
+  bool need_parentesis_in_default() { return true; }
 };
 
 
@@ -689,6 +691,7 @@ public:
   void fix_length_and_dec() { maybe_null= 1; }
   const char *func_name() const { return "double_typecast"; }
   virtual void print(String *str, enum_query_type query_type);
+  bool need_parentesis_in_default() { return true; }
 };
 
 
@@ -772,6 +775,7 @@ public:
 
   bool check_partition_func_processor(uchar *int_arg) {return FALSE;}
   bool check_vcol_func_processor(uchar *arg) { return FALSE;}
+  bool need_parentesis_in_default() { return true; }
 };
 
 
@@ -803,6 +807,7 @@ public:
   uint decimal_precision() const { return args[0]->decimal_precision(); }
   bool check_partition_func_processor(uchar *int_arg) {return FALSE;}
   bool check_vcol_func_processor(uchar *arg) { return FALSE;}
+  bool need_parentesis_in_default() { return true; }
 };
 
 
@@ -1248,6 +1253,7 @@ public:
   {
     print_op(str, query_type);
   }
+  bool need_parentesis_in_default() { return true; }
 };
 
 class Item_func_bit_or :public Item_func_bit
@@ -1974,7 +1980,7 @@ public:
   void init_search(THD *thd, bool no_order);
   bool check_vcol_func_processor(uchar *arg)
   {
-    return false;
+    return mark_unsupported_function(func_name(), arg, VCOL_IMPOSSIBLE);
   }
 private:
   /**
@@ -2010,7 +2016,6 @@ private:
 
     return false;
   }
-
 };
 
 

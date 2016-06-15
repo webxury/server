@@ -10599,7 +10599,13 @@ Create_field *Create_field::clone(MEM_ROOT *mem_root) const
   return res;
 }
 
-/* Return true if default is an expression that must be saved explicitely */
+/**
+   Return true if default is an expression that must be saved explicitely
+
+   This is:
+     - Not basic constants
+     - If field is a BLOB (Which doesn't support normal DEFAULT)
+*/
 
 bool Column_definition::has_default_expression()
 {

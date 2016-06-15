@@ -904,6 +904,7 @@ public:
   }
   virtual void print(String *str, enum_query_type query_type);
   const char *func_name() const { return "cast_as_binary"; }
+  bool need_parentesis_in_default() { return true; }
 };
 
 
@@ -1056,6 +1057,7 @@ public:
     /* this function is transparent for view updating */
     return args[0]->field_for_view_update();
   }
+  bool need_parentesis_in_default() { return true; }
 };
 
 

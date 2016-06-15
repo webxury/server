@@ -95,10 +95,8 @@ create or replace table t1 (a datetime, b datetime as (utc_timestamp()) PERSISTE
 create or replace table t1 (a datetime, b datetime as (week(a)) PERSISTENT);
 
 --echo # MATCH()
-if (!$skip_full_text_checks)
-{
+--error ER_VIRTUAL_COLUMN_FUNCTION_IS_NOT_ALLOWED
   create or replace table t1 (a varchar(32), b bool as (match a against ('sample text')) PERSISTENT);
-}
 
 --echo # BENCHMARK()
 -- error ER_VIRTUAL_COLUMN_FUNCTION_IS_NOT_ALLOWED

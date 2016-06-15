@@ -4921,8 +4921,6 @@ static my_bool discover_existence(THD *thd, plugin_ref plugin,
 void Table_scope_and_contents_source_st::init(THD *thd)
 {
   bzero(this, sizeof(*this));
-  stored_expressions_charset=   thd->variables.character_set_client;
-  stored_expressions_collation= thd->variables.collation_connection;
 }
 
 

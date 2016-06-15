@@ -587,7 +587,6 @@ struct TABLE_SHARE
   uchar	*default_values;		/* row with default values */
   LEX_STRING comment;			/* Comment about table */
   CHARSET_INFO *table_charset;		/* Default charset of string fields */
-  CHARSET_INFO *stored_expressions_collation;
 
   MY_BITMAP all_set;
   /*

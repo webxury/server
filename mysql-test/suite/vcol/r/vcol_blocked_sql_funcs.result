@@ -60,6 +60,7 @@ create or replace table t1 (a datetime, b datetime as (week(a)) PERSISTENT);
 ERROR HY000: Function or expression 'get_system_var' is not allowed for 'VIRTUAL' of column/constraint 'b'
 # MATCH()
 create or replace table t1 (a varchar(32), b bool as (match a against ('sample text')) PERSISTENT);
+ERROR HY000: Function or expression 'match' is not allowed for 'VIRTUAL' of column/constraint 'b'
 # BENCHMARK()
 create or replace table t1 (a varchar(1024), b varchar(1024) as (benchmark(a,3)));
 ERROR HY000: Function or expression 'benchmark' is not allowed for 'VIRTUAL' of column/constraint 'b'

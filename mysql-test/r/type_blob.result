@@ -895,9 +895,9 @@ INSERT INTO b15776 VALUES (42);
 SELECT * FROM b15776;
 a
 2042
-CREATE OR REPLACE TABLE b15776 (a year(4294967296));
+CREATE OR REPLACE TABLE b15776 (a year(?));
 Warnings:
-Note	1287	'YEAR(4294967296)' is deprecated and will be removed in a future release. Please use YEAR(4) instead
+Note	1287	'YEAR(?)' is deprecated and will be removed in a future release. Please use YEAR(4) instead
 CREATE OR REPLACE TABLE b15776 (a year(0));
 Warnings:
 Note	1287	'YEAR(0)' is deprecated and will be removed in a future release. Please use YEAR(4) instead

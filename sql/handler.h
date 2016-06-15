@@ -1636,8 +1636,7 @@ struct Schema_specification_st
 
 struct Table_scope_and_contents_source_st
 {
-  CHARSET_INFO *table_charset, *stored_expressions_charset,
-               *stored_expressions_collation;
+  CHARSET_INFO *table_charset;
   LEX_CUSTRING tabledef_version;
   LEX_STRING connect_string;
   const char *password, *tablespace;

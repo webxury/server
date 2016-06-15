@@ -2156,10 +2156,6 @@ int TABLE_SHARE::init_from_binary_frm_image(THD *thd, bool write,
   if (vcol_screen_length && share->frm_version >= FRM_VER_EXPRESSSIONS)
   {
     uchar *vcol_screen_end= vcol_screen_pos + vcol_screen_length;
-    uint charset= uint2korr(vcol_screen_pos);
-    if (!(share->stored_expressions_collation= get_charset(charset,
-                                                           MYF(MY_WME))))
-      goto err;
 
     /* Skip header */
     vcol_screen_pos+= FRM_VCOL_NEW_BASE_SIZE;
@@ -2198,8 +2194,11 @@ int TABLE_SHARE::init_from_binary_frm_image(THD *thd, bool write,
       vcol_info->name= name;
 
       /* The following can only be true for check_constraints */
-      if (field_nr != UINT_MAX32)
+      if (field_nr != UINT_MAX16)
+      {
+        DBUG_ASSERT(field_nr < share->fields);
         reg_field= share->field[field_nr];
+      }
 
       vcol_info->expr_str.str=    expr;
       vcol_info->expr_str.length= expr_length;
@@ -2677,6 +2676,7 @@ Virtual_column_info *unpack_vcol_info_from_frm(THD *thd,
   LEX_STRING *vcol_expr= &vcol->expr_str;
   LEX *old_lex= thd->lex;
   LEX lex;
+  bool error;
   DBUG_ENTER("unpack_vcol_info_from_frm");
   DBUG_ASSERT(vcol_expr);
 
@@ -2742,12 +2742,14 @@ Virtual_column_info *unpack_vcol_info_from_frm(THD *thd,
   if (vcol->utf8)
   {
     thd->update_charset(&my_charset_utf8mb4_general_ci,
-                        table->s->stored_expressions_collation);
+                        table->s->table_charset);
   }
-  if (parse_sql(thd, &parser_state, NULL))
-  {
+  thd->in_stored_expression= 1;
+  error= parse_sql(thd, &parser_state, NULL);
+  thd->in_stored_expression= 0;
+  if (error)
     goto err;
-  }
+
   /*
     mark if expression will be stored in the table. This is also used by
     fix_vcol_expr() to mark if we are using non deterministic functions.
@@ -2771,7 +2773,8 @@ end:
   if (vcol_arena)
     thd->restore_active_arena(vcol_arena, &backup_arena);
   end_lex_with_single_table(thd, table, old_lex);
-  thd->update_charset(save_character_set_client, save_collation);
+  if (vcol->utf8)
+    thd->update_charset(save_character_set_client, save_collation);
 
   DBUG_RETURN(vcol_info);
 }

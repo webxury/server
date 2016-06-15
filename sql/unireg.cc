@@ -532,7 +532,7 @@ static bool add_expr_length(THD *thd, Virtual_column_info **v_col_ptr,
     LEX_STRING to;
     if (thd->copy_with_error(&my_charset_utf8mb4_general_ci,
                              &to,
-                             info->stored_expressions_charset,
+                             thd->variables.character_set_client,
                              v_col->expr_str.str, v_col->expr_str.length))
       return 1;
     *new_vcol= *v_col;
@@ -968,9 +968,8 @@ static bool pack_fields(uchar **buff_arg, List<Create_field> &create_fields,
 
   if (create_info->expression_length)
   {
-    /* Store header for packed fields */
+    /* Store header for packed fields (extra space for future) */
     bzero(buff, FRM_VCOL_NEW_BASE_SIZE);
-    int2store(buff, create_info->stored_expressions_collation->number);
     buff+= FRM_VCOL_NEW_BASE_SIZE;
 
     /* Store expressions */

@@ -1636,9 +1636,18 @@ static bool get_field_default_value(THD *thd, Field *field, String *def_value,
   {
     if (field->default_value)
     {
-      def_value->set(field->default_value->expr_str.str,
-                     field->default_value->expr_str.length,
-                     &my_charset_utf8mb4_general_ci);
+      if (field->default_value->expr_item->need_parentesis_in_default())
+      {
+        def_value->set_charset(&my_charset_utf8mb4_general_ci);
+        def_value->append('(');
+        def_value->append(field->default_value->expr_str.str,
+                          field->default_value->expr_str.length);
+        def_value->append(')');
+      }
+      else
+        def_value->set(field->default_value->expr_str.str,
+                       field->default_value->expr_str.length,
+                       &my_charset_utf8mb4_general_ci);
     }
     else if (has_now_default)
     {
