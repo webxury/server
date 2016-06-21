@@ -185,6 +185,7 @@ storage/connect/filamvct\.cpp: might be clobbered by
 storage/connect/xindex\.cpp: ignoring return value of
 storage/connect/value\.cpp: always false
 storage/connect/json\.cpp: might be clobbered by
+storage/connect/value\.cpp : comparison is always false : 1000-1020
 
 #
 # mroonga
@@ -235,14 +236,13 @@ mdl\.cc: offsetoff
 
 # Wrong warning due to GCC bug: http://gcc.gnu.org/bugzilla/show_bug.cgi?id=29478
 regexec\.c : passing argument 3 of.*matcher.* discards qualifiers from pointer target type
-libmysql\.c: passing argument 2 of .*memcpy.* discards qualifiers from pointer target type : 3000-4000
+libmysql\.c:  passing argument 2 of .*memcpy.* discards qualifiers from pointer target type : 3000-4000
 storage/.*/dict/dict0dict\.c : passing argument 1 of .*strcpy.* discards qualifiers from pointer target type : 2500-3500
 storage/.*/sync/sync0rw\.c : passing argument 1 of .*memset.* discards qualifiers from pointer target type : 200-300
 storage/.*/btr/btr0sea\.c : passing argument 2 of .*btr_cur_position.* discards qualifiers from pointer
 
 # Fixed wrong warning in GCC due to https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61520
-
-strings/decimal.c: array subscript is below array bounds
+strings/decimal\.c : array subscript is below array bounds
 
 #
 # Strange things from autoconf that is probably safe to ignore

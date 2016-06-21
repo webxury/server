@@ -2067,7 +2067,7 @@ write_buffers:
 					pct_cost : 
 				((pct_cost * read_rows) / table_total_rows);
 			/* presenting 10.12% as 1012 integer */
-			onlineddl_pct_progress = curr_progress * 100;
+			onlineddl_pct_progress = (ulint) (curr_progress * 100);
 		}
 	}
 
@@ -2603,7 +2603,7 @@ row_merge_sort(
 
 	/* Find the number N which 2^N is greater or equal than num_runs */
 	/* N is merge sort running count */
-	total_merge_sort_count = ceil(my_log2f(num_runs));
+	total_merge_sort_count = (ulint) ceil(my_log2f(num_runs));
 	if(total_merge_sort_count <= 0) {
 		total_merge_sort_count=1;
 	}
@@ -2650,7 +2650,7 @@ row_merge_sort(
 				pct_cost :
 				((pct_cost * merge_count) / total_merge_sort_count);
 			/* presenting 10.12% as 1012 integer */;
-			onlineddl_pct_progress = (pct_progress + curr_progress) * 100;
+			onlineddl_pct_progress = (ulint) ((pct_progress + curr_progress) * 100);
 		}
 
 		if (error != DB_SUCCESS) {
@@ -2933,7 +2933,7 @@ row_merge_insert_index_tuples(
 					((pct_cost * inserted_rows) / table_total_rows);
 
 				/* presenting 10.12% as 1012 integer */;
-				onlineddl_pct_progress = (pct_progress + curr_progress) * 100;
+				onlineddl_pct_progress = (ulint) ((pct_progress + curr_progress) * 100);
 			}
 		}
 	}
