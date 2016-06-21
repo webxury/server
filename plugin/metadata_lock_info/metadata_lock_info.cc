@@ -129,12 +129,15 @@ public:
 };
 
 
+static I_List<THD> *threads_ptr;
+
+
 static THD *find_thread(my_thread_id id)
 {
   THD *tmp;
 
   mysql_mutex_lock(&LOCK_thread_count);
-  I_List_iterator<THD> it(threads);
+  I_List_iterator<THD> it(*threads_ptr);
   while ((tmp= it++))
   {
     if (id == tmp->thread_id)
@@ -160,7 +163,7 @@ static int i_s_metadata_lock_info_fill_table(THD *thd, TABLE_LIST *tables,
   /* Gather thread identifiers */
   my_init_dynamic_array(&ids, sizeof(my_thread_id), 512, 1, MYF(0));
   mysql_mutex_lock(&LOCK_thread_count);
-  I_List_iterator<THD> it(threads);
+  I_List_iterator<THD> it(*threads_ptr);
   while ((tmp= it++))
     if (tmp != thd && (info.error= insert_dynamic(&ids, &tmp->thread_id)))
       break;
@@ -186,6 +189,11 @@ static int i_s_metadata_lock_info_init(
   schema->fields_info = i_s_metadata_lock_info_fields_info;
   schema->fill_table = i_s_metadata_lock_info_fill_table;
   schema->idx_field1 = 0;
+#ifdef _WIN32
+  threads_ptr= (I_List<THD>*) GetProcAddress(GetModuleHandle(NULL), "?threads@@3V?$I_List@VTHD@@@@A");
+#else
+  threads_ptr= &threads;
+#endif
   DBUG_RETURN(0);
 }
 
