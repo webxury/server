@@ -3618,7 +3618,7 @@ void jsoncontains_path_deinit(UDF_INIT* initid)
 /*********************************************************************************/
 /*  This function is used by the json_set/insert/update_item functions.          */
 /*********************************************************************************/
-char *handle_item(UDF_INIT *initid, UDF_ARGS *args, char *result,
+static char *handle_item(UDF_INIT *initid, UDF_ARGS *args, char *result,
 	unsigned long *res_length, char *is_null, char *error)
 {
 	char   *p, *path, *str = NULL;
@@ -4891,7 +4891,7 @@ void jbin_item_merge_deinit(UDF_INIT* initid)
 /*********************************************************************************/
 /*  This function is used by the jbin_set/insert/update functions.               */
 /*********************************************************************************/
-char *bin_handle_item(UDF_INIT *initid, UDF_ARGS *args, char *result,
+static char *bin_handle_item(UDF_INIT *initid, UDF_ARGS *args, char *result,
 	unsigned long *res_length, char *is_null, char *error)
 {
 	char   *p, *path;
